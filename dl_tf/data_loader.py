@@ -35,6 +35,11 @@ class SeizureDataset:
         self.index_0 = 0
         self.batch_index = self.batch_size
 
+
+    def set_batch_size(self, batch_size):
+        self.batch_size = batch_size
+        self.batch_index = self.batch_size
+
     def get_data_dir(self):
 
         path_to_dataset = os.path.join(
@@ -173,52 +178,42 @@ class SeizureDataset:
 
 
 
-    def load_data(self, train_set_name):
+    def load_train_data(self, train_set_name):
 
         data_interictal, data_preictal = self.pick_random_observation(train_set_name)
         shuffled_dataset = self.merge_and_shuffle_selection(data_interictal,
                                                         data_preictal)
 
         print("Size of final training set", shuffled_dataset.shape)
-        base_dir_train = os.path.abspath(os.path.join(
 
-                        '../..', 'data_dir/Kaggle_data/data/'))
-        base_dir_train = base_dir_train + '/' + train_set_name
+        base_dir_train = self.path_to_all_datasets + '/' + train_set_name
         print("Data set directory==>", base_dir_train)
         X_train, _ = self.get_X_from_files(base_dir_train,
                                          shuffled_dataset['file'],
-                                         self.input_sample_rate)
+                                         self.input_subsample_rate)
         y_train = shuffled_dataset['class']
         return X_train, y_train
 
 
     def load_test_data(self, test_set_name):
-        base_dir_test = os.path.abspath(os.path.join(
-                        '../..', 'data_dir/Kaggle_data/data/'))
-        base_dir_test = base_dir_test + '/' + test_set_name
+
+        base_dir_test = self.path_to_all_datasets + '/' + test_set_name
         print("Data set directory==>", base_dir_test)
         all_data = self.get_data_dir()
         #print("all data", all_data, len(all_data))
         X_test, file_ids = self.get_X_from_files(base_dir_test,
                                                  all_data,
-                                                 self.input_sample_rate)
+                                                 self.input_subsample_rate)
         return X_test, file_ids
 
 
     def next_training_batch(self,
                             X_train,
-                            y_train,
-                            total_batch,
-                            input_timesteps,
-                            input_dim,
-                            out_dim):
+                            y_train):
 
-        batch_xs = X_train[self.index: self.batch_index]
-        batch_ys = y_train[self.index: self.batch_index]
-        batch_xs = np.reshape(batch_xs,
-                                (self.batch_size, input_timesteps, input_dim))
-        batch_ys = np.reshape(batch_ys, (self.batch_size, out_dim))
-        self.index += self.batch_size
+        batch_xs = X_train[self.index_0: self.batch_index]
+        batch_ys = y_train[self.index_0: self.batch_index]
+        self.index_0 += self.batch_size
         self.batch_index += self.batch_size
 
         return batch_xs, batch_ys

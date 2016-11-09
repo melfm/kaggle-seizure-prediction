@@ -19,31 +19,30 @@ import pdb
 
 class SeizureClassifier:
 
-
     def __init__(self,
-                 input_channel = 16,
+                 input_dim=16,
                  input_timestep=1000,
-                 output_classes = 1,
-                 batch_size = 20,
-                 hidden1_units = 100,
-                 pos_weight = 5):
+                 output_classes=1,
+                 batch_size=20,
+                 hidden1_units=100,
+                 pos_weight=5):
         """ Initialize the network variables
         Args:
-            input_channel: Number of channels in the data i.e. column data
+            input_dim: Number of channels in the data i.e. column data
             input_timestep: Number of signal time steps after subsampling
             output_classes: Number of outcomes, 0 or 1
             hidden1_units: Size of the first hidden layer
         """
-        self.input_channel = input_channel
+        self.input_dim = input_dim
         self.input_timestep = input_timestep
         self.output_classes = output_classes
         self.batch_size = batch_size
         self.hidden1_units = hidden1_units
         self.pos_weight = pos_weight
 
-        self.x_pl = tf.placeholder(tf.float32,
-                                   [None, self.input_timestep,self.input_channel],
-                                   name ='x-input')
+        self.x_pl = tf.placeholder(
+            tf.float32, [None, self.input_timestep, self.input_dim],
+            name='x-input')
         self.y_pl = tf.placeholder(tf.float32,
                                    [None, self.output_classes],
                                    name='y-input')
@@ -68,7 +67,6 @@ class SeizureClassifier:
         initial = tf.random_normal(shape=shape)
         return tf.Variable(initial)
 
-
     def _variable_summaries(self, var, name):
         """Attach summaries to a Tensor."""
         with tf.name_scope('summaries'):
@@ -91,11 +89,11 @@ class SeizureClassifier:
             # This Variable will hold the state of the weights for the layer
             with tf.name_scope('weights'):
                 weights = self._weight_variable([input_dim, output_dim])
-                self.variable_summaries(weights, 'h1/weights')
+                self._variable_summaries(weights, 'h1/weights')
 
             with tf.name_scope('biases'):
                 biases = self._bias_variable([output_dim])
-                self.variable_summaries(biases, 'b1/biases')
+                self._variable_summaries(biases, 'b1/biases')
 
             # Prepare data shape to match `rnn` function requirements
             # Current data input shape: (batch_size, n_steps, n_input)
@@ -123,14 +121,17 @@ class SeizureClassifier:
     def _build_net(self):
         # Build the classifier network
         self.logits = self._rnn_layer(self.x_pl,
-                                  self.hidden1_units,
-                                  self.output_classes,
-                                  'hidden1')
+                                      self.hidden1_units,
+                                      self.output_classes,
+                                      'hidden1')
+
     def setup_loss(self):
         """Calculates the loss from the logits and the labels."""
         self.cross_entropy = tf.nn.weighted_cross_entropy_with_logits(
                     self.logits, self.y_pl, self.pos_weight)
-        self.loss = tf.reduce_mean(self.cross_entropy, name='weighted_entropy_mean')
+        self.loss = tf.reduce_mean(
+            self.cross_entropy,
+            name='weighted_entropy_mean')
 
     def setup_training_op(self, learning_rate):
         """Sets up the training Ops.
@@ -148,13 +149,12 @@ class SeizureClassifier:
                     learning_rate=learning_rate)
         self.train_op = optimizer.minimize(self.loss)
 
-
     def do_eval(self, data_set):
         pass
 
-    def do_train(self, data_set, FLAGS):
+    def do_train(self, data_handler, X_train, y_labels, FLAGS):
         # add the op to optimize
-        self.setup_traning_op(FLAGS.learning_rate)
+        self.setup_training_op(FLAGS.learning_rate)
         # Add the op tp evaluate the classifier
 
         # Add the variable initializer op.
@@ -162,10 +162,29 @@ class SeizureClassifier:
         # Run the op to initialize the variables
         self.sess.run(init)
         # Start the training iterations
-        for step in xrange(FLAGS.epochs):
+        for epoch in xrange(FLAGS.epochs):
             start_time = time.time()
+            total_batch = len(X_train)/self.batch_size
+            print('total batch size', total_batch)
+            for i in range(int(total_batch)):
+                batch_xs, batch_ys = data_handler.next_training_batch(
+                                    X_train,
+                                    y_labels)
+                batch_xs_tensor = np.reshape(batch_xs,
+                                             (self.batch_size,
+                                                 self.input_timestep,
+                                                 self.input_dim))
+                batch_ys_tensor = np.reshape(batch_ys,
+                                             (self.batch_size,
+                                                 self.output_classes))
 
+                _, c = self.sess.run([self.train_op, self.loss],
+                                     feed_dict={self.x_pl: batch_xs_tensor,
+                                                self.y_pl: batch_ys_tensor})
+                print("Epoch:", '%04d' %
+                    (epoch + 1), "cost=", "{:.9f}".format(c))
+
+            print("Optimization Finishes!")
             # Do training here
             duration = time.time() - start_time
-
-
+            print('Training duration: %.3f sec', duration)
