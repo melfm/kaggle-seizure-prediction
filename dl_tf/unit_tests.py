@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 import unittest
 import numpy as np
+import matplotlib.pyplot as plt
 from data_loader import SeizureDataset
 
 
@@ -9,7 +10,7 @@ class DataLoader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.ds = SeizureDataset(1000,
-                                'train_1_dummy'
+                                'train_1_dummy',
                                 'test_1_dummy')
 
     def test_label(self):
@@ -91,6 +92,31 @@ class DataLoader(unittest.TestCase):
         ids = file_with_class['file']
         self.assertEqual(ids[0],'1_843_0.mat')
         self.assertEqual(ids[1],'1_58_1.mat')
+
+
+
+    def test_data_loader(self):
+        train_set_name = 'train_1_dummy'
+        data_interictal, data_preictal = self.ds.pick_random_observation(
+                                        train_set_name)
+        shuffled_dataset = self.ds.merge_and_shuffle_selection(data_interictal,
+                                                            data_preictal)
+
+        print("test data loader")
+        print(shuffled_dataset)
+        eeg_label = shuffled_dataset['class']
+        print("Labels", eeg_label)
+
+        base_dir_train = self.ds.path_to_all_datasets + '/' + train_set_name
+        print("Data set directory==>", base_dir_train)
+        eeg_data, _ = self.ds.get_X_from_files(
+            base_dir_train, shuffled_dataset['file'],
+            self.ds.input_subsample_rate)
+
+        data_indx = 3
+        chan = 1
+        plt.plot(eeg_data[data_indx][chan, :])
+        plt.show()
 
 
 if __name__ == '__main__':
