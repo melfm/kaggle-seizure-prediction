@@ -1,9 +1,11 @@
 #! /usr/bin/env/ python2
 from scipy.signal import resample
+from operator import itemgetter
 import matplotlib.pyplot as plt
 import scipy.io
 import numpy as np
 import pandas as pd
+import random
 import pdb
 import os
 from sklearn import preprocessing
@@ -26,7 +28,7 @@ class SeizureDataset:
                  input_subsample_rate=1000,
                  train_set='train_1',
                  test_set='test_1_new',
-                 batch_size = 1):
+                 batch_size=1):
         self.input_subsample_rate = input_subsample_rate
         self.train_set = train_set
         self.test_set = test_set
@@ -35,15 +37,14 @@ class SeizureDataset:
         self.index_0 = 0
         self.batch_index = self.batch_size
 
-
     def set_batch_size(self, batch_size):
         self.batch_size = batch_size
         self.batch_index = self.batch_size
 
-    def get_data_dir(self):
+    def get_data_dir(self, data_set_name):
 
         path_to_dataset = os.path.join(
-            self.path_to_all_datasets, self.train_set)
+            self.path_to_all_datasets, data_set_name)
         print('Loading data set:\n', path_to_dataset)
         data_files = os.listdir(path_to_dataset)
         for mat_file in data_files:
@@ -88,7 +89,7 @@ class SeizureDataset:
         ignored_files = ignored_files['image'].tolist()
         ignored_files.append('1_45_1.mat')
         #print('Ignoring these files:', ignored_files)
-        all_data = self.get_data_dir()
+        all_data = self.get_data_dir(data_dir_name)
 
         file_with_class = np.array(
             [(mat_file, self.get_class_from_name(mat_file))
@@ -113,6 +114,10 @@ class SeizureDataset:
         # Need a dataset size divisible by batch size
         if (data_dir_name == 'train_1'):
             inter_count = inter_count-19
+
+        #inter_count = 500
+        inter_count = 2
+        preic_count =1
 
         data_random_interictal = np.random.choice(
             all_data[all_data['class'] == self.INTERICTAL_CLASS],
@@ -181,46 +186,56 @@ class SeizureDataset:
 
         return eeg_data, file_ids
 
-
-
     def load_train_data(self, train_set_name):
-
-        data_interictal, data_preictal = self.pick_random_observation(train_set_name)
+        print('Using subsample rate', self.input_subsample_rate)
+        data_interictal, data_preictal = self.pick_random_observation(
+                                                                      train_set_name)
         shuffled_dataset = self.merge_and_shuffle_selection(data_interictal,
-                                                        data_preictal)
+                                                            data_preictal)
 
         print("Size of final training set", shuffled_dataset.shape)
 
         base_dir_train = self.path_to_all_datasets + '/' + train_set_name
         print("Data set directory==>", base_dir_train)
         X_train, _ = self.get_X_from_files(base_dir_train,
-                                         shuffled_dataset['file'],
-                                         self.input_subsample_rate)
+                                           shuffled_dataset['file'],
+                                           self.input_subsample_rate)
         y_train = shuffled_dataset['class']
         return X_train, y_train
-
 
     def load_test_data(self, test_set_name):
 
         base_dir_test = self.path_to_all_datasets + '/' + test_set_name
         print("Data set directory==>", base_dir_test)
-        all_data = self.get_data_dir()
+        all_data = self.get_data_dir(test_set_name)
         #print("all data", all_data, len(all_data))
         X_test, file_ids = self.get_X_from_files(base_dir_test,
                                                  all_data,
                                                  self.input_subsample_rate)
         return X_test, file_ids
 
-
     def next_training_batch(self,
                             X_train,
                             y_train):
+
+        if(self.batch_index == len(X_train)):
+            # Reset the data handler index
+            self.index_0 = 0
+            self.batch_index = self.batch_size
 
         batch_xs = X_train[self.index_0: self.batch_index]
         batch_ys = y_train[self.index_0: self.batch_index]
         self.index_0 += self.batch_size
         self.batch_index += self.batch_size
-
-        # TODO: Reset the index
-
         return batch_xs, batch_ys
+
+    def get_evaluation_set(self,
+                           X_train,
+                           y_train,
+                           eval_size):
+        data_size = len(X_train) - 1
+
+        rand_indices = random.sample(range(0, data_size), eval_size)
+        X_train_sampl = itemgetter(*rand_indices)(X_train)
+        y_train_sampl = itemgetter(*rand_indices)(y_train)
+        return X_train_sampl, y_train_sampl

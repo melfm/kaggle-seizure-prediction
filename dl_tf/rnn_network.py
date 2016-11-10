@@ -54,6 +54,8 @@ class SeizureClassifier:
         self._build_net()
         self.sess = tf.Session(config=tf.ConfigProto(
             intra_op_parallelism_threads=self.num_threads))
+        # 'Saver' op to save and restore all the variables
+        self.saver = tf.train.Saver()
 
         self.loss = None
         self.cross_entropy = None
@@ -167,7 +169,7 @@ class SeizureClassifier:
             dic = {self.x_pl: batch_xs, self.y_pl: batch_y}
             true_count += round(self.sess.run(tf.sigmoid(self.logits),
                                               feed_dict=dic)) == batch_y_test
-            pdb.set_trace()
+            # pdb.set_trace()
         precision = true_count / num_examples
         print('Num examples: ', num_examples,
               'Num correct: ', true_count,
@@ -180,9 +182,7 @@ class SeizureClassifier:
 
         # Add the variable initializer op.
         init = tf.initialize_all_variables()
-        # 'Saver' op to save and restore all the variables
-        saver = tf.train.Saver()
-        #merged = tf.merge_all_summaries()
+        merged = tf.merge_all_summaries()
         train_writer = tf.train.SummaryWriter(FLAGS.summaries_dir + '/train',
                                               self.sess.graph)
         # Run the op to initialize the variables
@@ -205,19 +205,27 @@ class SeizureClassifier:
                                              (self.batch_size,
                                                  self.output_classes))
 
-                _, c = self.sess.run([ self.train_op, self.loss],
+                summary, _, c = self.sess.run([merged, self.train_op, self.loss],
                                               feed_dict={self.x_pl: batch_xs_tensor,
                                                          self.y_pl: batch_ys_tensor})
-                #train_writer.add_summary(summary, epoch)
+                train_writer.add_summary(summary, epoch)
             print("Epoch:", '%04d' %
                   (epoch + 1), "cost=", "{:.9f}".format(c))
 
-            if ((epoch+1) % 5 == 0) or (epoch+1) == FLAGS.epochs:
+            if ((epoch+1) % 5 == 0) or (epoch+1) == FLAGS.epochs \
+                    or FLAGS.eval_net:
                 print("Evaluation after %d epochs" % epoch)
-                #self.do_eval(X_train, y_labels)
+                eval_size = 2
+                if(FLAGS.eval_rand):
+                    X_train_eval_sampl, y_train_eval_sampl = data_handler.get_evaluation_set(
+                                                        X_train, y_labels, eval_size)
+
+                    self.do_eval(X_train_eval_sampl, y_train_eval_sampl)
+                else:
+                    self.do_eval(X_train[0:eval_size], y_labels[0:eval_size])
             # Reset the data handler index
-            data_handler.index_0 = 0
-            data_handler.batch_index = self.batch_size
+            #data_handler.index_0 = 0
+            #data_handler.batch_index = self.batch_size
 
         print("Optimization Finishes!")
         # Do training here
@@ -229,6 +237,22 @@ class SeizureClassifier:
             os.makedirs(FLAGS.model_dir)
         print('Saving the trained model')
         print('-------------------------')
-        save_path = saver.save(
+        save_path = self.saver.save(
             self.sess, (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
         print('Model saved ->', save_path)
+
+    def predict(self, X_test, ids, FLAGS):
+        # Restore model weights from previously saved model
+        self.saver.restore(
+            self.sess,
+            (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
+        predictions = []
+        for i in range(len(X_test)):
+            test_x = X_test[i]
+            test_x_tensor = np.reshape(test_x,
+                                       (1, -1, test_x.shape[0]))
+            dic = {self.x_pl: test_x_tensor}
+            pred = self.sess.run(tf.sigmoid(self.logits), feed_dict=dic)
+            predictions.append(pred)
+        np.savetxt(FLAGS.test_set + '_predictions.csv', predictions)
+        np.savetxt(FLAGS.test_set + '_predictions_ids.csv', ids, fmt='%s')

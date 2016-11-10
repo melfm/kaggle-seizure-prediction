@@ -32,8 +32,12 @@ flags.DEFINE_integer(
 flags.DEFINE_integer('batch_size', 50, 'Size of batches of data to train on.')
 flags.DEFINE_boolean('report_train', True, 'If true, performs evaluation and '
                      'report the results at each num_steps iteration')
-flags.DEFINE_boolean('report_net', True, 'If true, perform evaluation after '
+flags.DEFINE_boolean('eval_net', True, 'If true, perform evaluation after '
                      'a network is trained and report the results.')
+flags.DEFINE_boolean(
+    'eval_rand',
+    True,
+     'If true, perform evaluation on random set')
 
 
 def train_and_validate():
@@ -71,7 +75,21 @@ def train_and_validate():
             rnn_net.do_train(ds_seizure, X_train, y_train, FLAGS)
             print('Final evaluation on the training data')
             print('---------------------------------------------------------------')
-            rnn_net.do_eval(X_train, y_train)
+            rnn_net.do_eval(X_train[0:10], y_train[0:10])
+
+        # At this point we are done with the training data
+        del X_train
+        del y_train
+
+    print('Done with training, restarting graph node')
+    X_test, ids = ds_seizure.load_test_data(FLAGS.test_set)
+    with tf.Graph().as_default():
+        # create and train the network
+        rnn_net = SeizureClassifier(
+            input_timestep=FLAGS.input_subsample_rate,
+            batch_size=FLAGS.batch_size)
+        rnn_net.setup_loss()
+        rnn_net.predict(X_test, ids, FLAGS)
 
 
 def main(_):
@@ -83,25 +101,32 @@ def main(_):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_dir', type=str, default='/tmp/seizure_models/',
-                        help='Directory for storing data')
+    parser.add_argument(
+        '--model_dir',
+        type=str,
+        default='/home/melissafm/seizure_models/',
+     help='Directory for storing data')
     parser.add_argument(
         '--summaries_dir',
         type=str,
         default='/tmp/seizureclassifier',
      help='Directory for storing data')
-    parser.add_argument('--train_set', type=str, default='train_1',
+    parser.add_argument('--train_set', type=str, default='train_1_dummy',
                         help='Directory for storing data')
-    parser.add_argument('--test_set', type=str, default='test_1_new',
+    parser.add_argument('--test_set', type=str, default='test_1_dummy',
                         help='Directory for storing data')
     parser.add_argument('--learning_rate', type=float, default=0.01,
                         help='Initial learning rate')
-    parser.add_argument('--epochs', type=int, default=20,
+    parser.add_argument('--epochs', type=int, default=2,
                         help='Number of steps to run trainer.')
-    parser.add_argument('--input_subsample_rate', type=int, default=1500,
+    parser.add_argument('--input_subsample_rate', type=int, default=100,
                         help='Number of steps to run trainer.')
-    parser.add_argument('--batch_size', type=int, default=50,
+    parser.add_argument('--batch_size', type=int, default=1,
                         help='Number of steps to run trainer.')
+    parser.add_argument('--eval_net', type=bool, default=True,
+                        help='Do evaluation after a few training iterations.')
+    parser.add_argument('--eval_rand', type=bool, default=False,
+                        help='Select evaluation set randomly.')
 
     FLAGS = parser.parse_args()
     tf.app.run()
