@@ -26,7 +26,7 @@ class SeizureClassifier:
                  batch_size=20,
                  hidden1_units=100,
                  pos_weight=5
-                 train_set_name):
+                 ):
         """ Initialize the network variables
         Args:
             input_dim: Number of channels in the data i.e. column data
@@ -40,7 +40,8 @@ class SeizureClassifier:
         self.batch_size = batch_size
         self.hidden1_units = hidden1_units
         self.pos_weight = pos_weight
-        self.train_set_name = train_set_name
+
+        self.num_threads = 5
 
         self.x_pl = tf.placeholder(
             tf.float32, [None, self.input_timestep, self.input_dim],
@@ -51,10 +52,7 @@ class SeizureClassifier:
 
         self._build_net()
         self.sess = tf.Session(config=tf.ConfigProto(
-            intra_op_parallelism_threads=5))
-
-        self.model_path = '/tmp/seizure_models/'
-        self.summaries_dir = '/tmp/seizclassifier'
+            intra_op_parallelism_threads=self.num_threads))
 
         self.loss = None
         self.cross_entropy = None
@@ -156,11 +154,12 @@ class SeizureClassifier:
         self.train_op = optimizer.minimize(self.loss)
 
     def do_eval(self, X_test, y_train):
-        true_count = 0 # Counts the number of correct predictions
+        true_count = 0  # Counts the number of correct predictions
         num_examples = len(X_test)
         for i in range(num_examples):
             batch_xs_test = X_test[i]
-            batch_xs = np.reshape(batch_xs_test, (1, -1, batch_xs_test.shape[0]))
+            batch_xs = np.reshape(
+                batch_xs_test, (1, -1, batch_xs_test.shape[0]))
             batch_y_test = int(y_train[i])
             batch_y_aslist = [batch_y_test]
             batch_y = np.reshape(batch_y_aslist, (1, len(batch_y_aslist)))
@@ -168,9 +167,9 @@ class SeizureClassifier:
             true_count += round(self.sess.run(tf.sigmoid(self.logits),
                                               feed_dict=dic)) == batch_y_test
         precision = true_count / num_examples
-        print('Num examples: ', num_examples,\
-               'Num correct: ', true_count,\
-               'Precision  %', precision,'%')
+        print('Num examples: ', num_examples,
+              'Num correct: ', true_count,
+              'Precision  %', precision, '%')
 
     def do_train(self, data_handler, X_train, y_labels, FLAGS):
         # add the op to optimize
@@ -181,9 +180,9 @@ class SeizureClassifier:
         init = tf.initialize_all_variables()
         # 'Saver' op to save and restore all the variables
         saver = tf.train.Saver()
-        merged = tf.merge_all_summaries()
-        train_writer = tf.train.SummaryWriter(summaries_dir + '/train',
-                                              sess.graph)
+        #merged = tf.merge_all_summaries()
+        train_writer = tf.train.SummaryWriter(FLAGS.summaries_dir + '/train',
+                                              self.sess.graph)
         # Run the op to initialize the variables
         self.sess.run(init)
         # Start the training iterations
@@ -203,12 +202,12 @@ class SeizureClassifier:
                                              (self.batch_size,
                                                  self.output_classes))
 
-                summary, _, c = self.sess.run([merged, self.train_op, self.loss],
-                                     feed_dict={self.x_pl: batch_xs_tensor,
-                                                self.y_pl: batch_ys_tensor})
-                train_writer.add_summary(summary, epoch)
+                _, c = self.sess.run([ self.train_op, self.loss],
+                                              feed_dict={self.x_pl: batch_xs_tensor,
+                                                         self.y_pl: batch_ys_tensor})
+                #train_writer.add_summary(summary, epoch)
             print("Epoch:", '%04d' %
-                (epoch + 1), "cost=", "{:.9f}".format(c))
+                  (epoch + 1), "cost=", "{:.9f}".format(c))
 
             if (epoch % 5 == 0):
                 print("Evaluation after 5 epochs")
@@ -224,6 +223,5 @@ class SeizureClassifier:
             os.makedirs(model_path)
         print('Saving the trained model')
         print('-------------------------')
-        save_path = saver.save(sess, (self.model_path + self.train_set_name + ".ckpt"))
-
-
+        save_path = saver.save(
+            sess, (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
