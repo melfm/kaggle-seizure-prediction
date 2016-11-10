@@ -48,7 +48,8 @@ class SeizureClassifier:
                                    name='y-input')
 
         self._build_net()
-        self.sess = tf.Session()
+        self.sess = tf.Session(config=tf.ConfigProto(
+            intra_op_parallelism_threads=5))
 
         self.loss = None
         self.cross_entropy = None
@@ -149,8 +150,22 @@ class SeizureClassifier:
                     learning_rate=learning_rate)
         self.train_op = optimizer.minimize(self.loss)
 
-    def do_eval(self, data_set):
-        pass
+    def do_eval(self, X_test, y_train):
+        true_count = 0 # Counts the number of correct predictions
+        num_examples = len(X_test)
+        for i in range(num_examples):
+            batch_xs_test = X_test[i]
+            batch_xs = np.reshape(batch_xs_test, (1, -1, batch_xs_test.shape[0]))
+            batch_y_test = int(y_train[i])
+            batch_y_aslist = [batch_y_test]
+            batch_y = np.reshape(batch_y_aslist, (1, len(batch_y_aslist)))
+            dic = {self.x_pl: batch_xs, self.y_pl: batch_y}
+            true_count += round(self.sess.run(tf.sigmoid(self.logits),
+                                              feed_dict=dic)) == batch_y_test
+        precision = true_count / num_examples
+        print('Num examples: ', num_examples,\
+               'Num correct: ', true_count,\
+               'Precision  %', precision,'%')
 
     def do_train(self, data_handler, X_train, y_labels, FLAGS):
         # add the op to optimize
@@ -181,10 +196,13 @@ class SeizureClassifier:
                 _, c = self.sess.run([self.train_op, self.loss],
                                      feed_dict={self.x_pl: batch_xs_tensor,
                                                 self.y_pl: batch_ys_tensor})
-                print("Epoch:", '%04d' %
-                    (epoch + 1), "cost=", "{:.9f}".format(c))
+            print("Epoch:", '%04d' %
+                (epoch + 1), "cost=", "{:.9f}".format(c))
+            self.do_eval(X_train, y_labels)
 
             print("Optimization Finishes!")
             # Do training here
             duration = time.time() - start_time
             print('Training duration: %.3f sec', duration)
+
+

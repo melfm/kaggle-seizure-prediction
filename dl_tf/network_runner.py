@@ -14,8 +14,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('result_dir', 'result', 'Directory to put the results.')
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
 flags.DEFINE_integer('epochs', 20, 'Number of steps to run trainer.')
-flags.DEFINE_boolean('input_subsample_rate', 1000, 'Subsampling original input.')
-flags.DEFINE_boolean('batch_size', 10, 'Size of batches of data to train on.')
+flags.DEFINE_boolean('input_subsample_rate', 5000, 'Subsampling original input.')
+flags.DEFINE_boolean('batch_size', 50, 'Size of batches of data to train on.')
 flags.DEFINE_boolean('report_train', True, 'If true, performs evaluation and '
                                           'report the results at each num_steps iteration')
 flags.DEFINE_boolean('report_net', True, 'If true, perform evaluation after '
@@ -24,15 +24,15 @@ flags.DEFINE_boolean('report_net', True, 'If true, perform evaluation after '
 def train_and_validate():
     print('Seizure Detection Learning')
     print('---------------------------------------------------------------')
-    train_set_name = 'train_1_dummy'
+    train_set_name = 'train_1'
     test_set_name = 'test_1_dummy'
-    batch_size = 1
+    batch_size = 50
     do_train = True
 
     ds_seizure = SeizureDataset(FLAGS.input_subsample_rate,
                                 train_set_name,
                                 test_set_name,
-                                batch_size)
+                                batch_size=batch_size)
 
     if do_train :
         X_train, y_train = ds_seizure.load_train_data(train_set_name)
@@ -46,11 +46,14 @@ def train_and_validate():
 
         with tf.Graph().as_default():
             # create and train the network
-            rnn_net = SeizureClassifier(batch_size=batch_size)
+            rnn_net = SeizureClassifier(
+                input_timestep=FLAGS.input_subsample_rate,
+                batch_size=batch_size)
             rnn_net.setup_loss()
             rnn_net.do_train(ds_seizure, X_train, y_train, FLAGS)
-
-
+            #print('Final evaluation on the training data')
+            #print('---------------------------------------------------------------')
+            #rnn_net.do_eval(X_train, y_train)
 
 
 
@@ -65,9 +68,9 @@ if __name__ == '__main__':
                         help='Directory for storing data')
     parser.add_argument('--learning_rate', type=float, default=0.01,
                         help='Initial learning rate')
-    parser.add_argument('--epochs', type=int, default=1,
+    parser.add_argument('--epochs', type=int, default=10,
                         help='Number of steps to run trainer.')
-    parser.add_argument('--input_subsample_rate', type=int, default=1000,
+    parser.add_argument('--input_subsample_rate', type=int, default=5000,
                         help='Number of steps to run trainer.')
     FLAGS = parser.parse_args()
     tf.app.run()

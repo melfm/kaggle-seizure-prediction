@@ -31,6 +31,7 @@ class SeizureDataset:
         self.train_set = train_set
         self.test_set = test_set
         self.batch_size = batch_size
+        print("Batch size :", batch_size)
 
         self.index_0 = 0
         self.batch_index = self.batch_size
@@ -99,7 +100,7 @@ class SeizureDataset:
 
     def pick_random_observation(self, data_dir_name):
         all_data = self.get_file_names_and_classes(data_dir_name)
-        print(all_data, data_dir_name)
+        #print(all_data, data_dir_name)
         inter_count, preic_count = self.count_class_occurrences(all_data)
         print('Interictal/0 samples:', inter_count)
         print('Preictal/1 samples:', preic_count)
@@ -109,9 +110,10 @@ class SeizureDataset:
         #    size=round(preic_count + (train_class_ratio * inter_count)))
         # Just load everything since we have a more balanced
         # dataset and penalizing non-positives more
+        # HACK
         data_random_interictal = np.random.choice(
             all_data[all_data['class'] == self.INTERICTAL_CLASS],
-            size=inter_count)
+            size=inter_count-19)
 
         # Take all preictal cases as they are scarce
         data_random_preictal = np.random.choice(
