@@ -14,6 +14,7 @@ import tensorflow as tf
 import numpy as np
 import time
 import math
+import os
 import pdb
 
 
@@ -25,7 +26,7 @@ class SeizureClassifier:
                  output_classes=1,
                  batch_size=20,
                  hidden1_units=100,
-                 pos_weight=5
+                 pos_weight=2
                  ):
         """ Initialize the network variables
         Args:
@@ -166,6 +167,7 @@ class SeizureClassifier:
             dic = {self.x_pl: batch_xs, self.y_pl: batch_y}
             true_count += round(self.sess.run(tf.sigmoid(self.logits),
                                               feed_dict=dic)) == batch_y_test
+            pdb.set_trace()
         precision = true_count / num_examples
         print('Num examples: ', num_examples,
               'Num correct: ', true_count,
@@ -189,8 +191,9 @@ class SeizureClassifier:
         for epoch in xrange(FLAGS.epochs):
             start_time = time.time()
             total_batch = len(X_train)/self.batch_size
-            print('total batch size', total_batch)
             for i in range(int(total_batch)):
+                batch_xs = None
+                batch_ys = None
                 batch_xs, batch_ys = data_handler.next_training_batch(
                                     X_train,
                                     y_labels)
@@ -209,9 +212,12 @@ class SeizureClassifier:
             print("Epoch:", '%04d' %
                   (epoch + 1), "cost=", "{:.9f}".format(c))
 
-            if (epoch % 5 == 0):
-                print("Evaluation after 5 epochs")
-                self.do_eval(X_train, y_labels)
+            if ((epoch+1) % 5 == 0) or (epoch+1) == FLAGS.epochs:
+                print("Evaluation after %d epochs" % epoch)
+                #self.do_eval(X_train, y_labels)
+            # Reset the data handler index
+            data_handler.index_0 = 0
+            data_handler.batch_index = self.batch_size
 
         print("Optimization Finishes!")
         # Do training here
@@ -219,9 +225,10 @@ class SeizureClassifier:
         print('Training duration: %.3f sec', duration)
         train_writer.close()
         # Save the final model to disk
-        if not os.path.exists(model_path):
-            os.makedirs(model_path)
+        if not os.path.exists(FLAGS.model_dir):
+            os.makedirs(FLAGS.model_dir)
         print('Saving the trained model')
         print('-------------------------')
         save_path = saver.save(
-            sess, (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
+            self.sess, (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
+        print('Model saved ->', save_path)

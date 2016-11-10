@@ -31,7 +31,6 @@ class SeizureDataset:
         self.train_set = train_set
         self.test_set = test_set
         self.batch_size = batch_size
-        print("Batch size :", batch_size)
 
         self.index_0 = 0
         self.batch_index = self.batch_size
@@ -111,9 +110,13 @@ class SeizureDataset:
         # Just load everything since we have a more balanced
         # dataset and penalizing non-positives more
         # HACK
+        # Need a dataset size divisible by batch size
+        if (data_dir_name == 'train_1'):
+            inter_count = inter_count-19
+
         data_random_interictal = np.random.choice(
             all_data[all_data['class'] == self.INTERICTAL_CLASS],
-            size=inter_count-19)
+            size=inter_count)
 
         # Take all preictal cases as they are scarce
         data_random_preictal = np.random.choice(
@@ -217,5 +220,7 @@ class SeizureDataset:
         batch_ys = y_train[self.index_0: self.batch_index]
         self.index_0 += self.batch_size
         self.batch_index += self.batch_size
+
+        # TODO: Reset the index
 
         return batch_xs, batch_ys
