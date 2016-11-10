@@ -25,7 +25,8 @@ class SeizureClassifier:
                  output_classes=1,
                  batch_size=20,
                  hidden1_units=100,
-                 pos_weight=5):
+                 pos_weight=5
+                 train_set_name):
         """ Initialize the network variables
         Args:
             input_dim: Number of channels in the data i.e. column data
@@ -39,6 +40,7 @@ class SeizureClassifier:
         self.batch_size = batch_size
         self.hidden1_units = hidden1_units
         self.pos_weight = pos_weight
+        self.train_set_name = train_set_name
 
         self.x_pl = tf.placeholder(
             tf.float32, [None, self.input_timestep, self.input_dim],
@@ -50,6 +52,9 @@ class SeizureClassifier:
         self._build_net()
         self.sess = tf.Session(config=tf.ConfigProto(
             intra_op_parallelism_threads=5))
+
+        self.model_path = '/tmp/seizure_models/'
+        self.summaries_dir = '/tmp/seizclassifier'
 
         self.loss = None
         self.cross_entropy = None
@@ -174,6 +179,11 @@ class SeizureClassifier:
 
         # Add the variable initializer op.
         init = tf.initialize_all_variables()
+        # 'Saver' op to save and restore all the variables
+        saver = tf.train.Saver()
+        merged = tf.merge_all_summaries()
+        train_writer = tf.train.SummaryWriter(summaries_dir + '/train',
+                                              sess.graph)
         # Run the op to initialize the variables
         self.sess.run(init)
         # Start the training iterations
@@ -193,16 +203,27 @@ class SeizureClassifier:
                                              (self.batch_size,
                                                  self.output_classes))
 
-                _, c = self.sess.run([self.train_op, self.loss],
+                summary, _, c = self.sess.run([merged, self.train_op, self.loss],
                                      feed_dict={self.x_pl: batch_xs_tensor,
                                                 self.y_pl: batch_ys_tensor})
+                train_writer.add_summary(summary, epoch)
             print("Epoch:", '%04d' %
                 (epoch + 1), "cost=", "{:.9f}".format(c))
-            self.do_eval(X_train, y_labels)
 
-            print("Optimization Finishes!")
-            # Do training here
-            duration = time.time() - start_time
-            print('Training duration: %.3f sec', duration)
+            if (epoch % 5 == 0):
+                print("Evaluation after 5 epochs")
+                self.do_eval(X_train, y_labels)
+
+        print("Optimization Finishes!")
+        # Do training here
+        duration = time.time() - start_time
+        print('Training duration: %.3f sec', duration)
+        train_writer.close()
+        # Save the final model to disk
+        if not os.path.exists(model_path):
+            os.makedirs(model_path)
+        print('Saving the trained model')
+        print('-------------------------')
+        save_path = saver.save(sess, (self.model_path + self.train_set_name + ".ckpt"))
 
 

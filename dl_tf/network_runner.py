@@ -48,7 +48,8 @@ def train_and_validate():
             # create and train the network
             rnn_net = SeizureClassifier(
                 input_timestep=FLAGS.input_subsample_rate,
-                batch_size=batch_size)
+                batch_size=batch_size,
+                train_set_name = train_set_name)
             rnn_net.setup_loss()
             rnn_net.do_train(ds_seizure, X_train, y_train, FLAGS)
             #print('Final evaluation on the training data')
