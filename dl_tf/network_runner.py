@@ -44,7 +44,7 @@ def train_and_validate():
     print('Seizure Detection Learning')
     print('---------------------------------------------------------------')
 
-    do_train = False
+    do_train = True
 
     ds_seizure = SeizureDataset(FLAGS.input_subsample_rate,
                                 FLAGS.train_set,
@@ -123,7 +123,7 @@ if __name__ == '__main__':
         type=str,
         default='/tmp/seizureclassifier',
      help='Directory for storing data')
-    parser.add_argument('--train_set', type=str, default='train_2',
+    parser.add_argument('--train_set', type=str, default='train_1_dummy',
                         help='Directory for storing data')
     parser.add_argument('--test_set', type=str, default='test_1_dummy',
                         help='Directory for storing data')

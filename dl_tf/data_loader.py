@@ -7,6 +7,8 @@ import pandas as pd
 import random
 import os
 from sklearn import preprocessing
+import pdb
+import matplotlib.pyplot as plt
 
 
 class SeizureDataset:
@@ -168,14 +170,22 @@ class SeizureDataset:
             # Gets a 16x240000 matrix => 16 channels reading data for 10 minutes at
             # 400Hz
             channels_data_nn = mat_data['dataStruct'][0][0][0].transpose()
-            # Resamble each channel to get data at 100Hz
-            channels_data_nn = resample(channels_data_nn,
-                                        sub_sample_rate,
-                                        axis=1,
-                                        window=400)
+            channel_columns = channels_data_nn.shape[0]
+            timestep_rows = channels_data_nn.shape[1]
+            indices = np.arange(0, (timestep_rows - 1), 160)
 
+            eeg_subsampl = np.zeros((channel_columns, len(indices)))
+            for i in range((channel_columns-1)):
+                eeg_subsampl[i][:] = itemgetter(*indices)(channels_data_nn[i])
+
+            # Resamble each channel to get data at 100Hz
+            #channels_data_nn = resample(channels_data_nn,
+            #                            1500,
+            #                            axis=1,
+            #                            window=400)
+            pdb.set_trace()
             # drop if nan
-            df = pd.DataFrame(channels_data_nn, index=None)
+            df = pd.DataFrame(eeg_subsampl, index=None)
             df = df.dropna()
             # Normalize
             channels_data = self.normalize(df)
