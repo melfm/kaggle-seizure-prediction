@@ -15,7 +15,7 @@ import numpy as np
 import time
 import math
 import os
-import pdb
+#import pdb
 
 
 class SeizureClassifier:
@@ -52,8 +52,9 @@ class SeizureClassifier:
                                    name='y-input')
 
         self._build_net()
-        self.sess = tf.Session(config=tf.ConfigProto(
-            intra_op_parallelism_threads=self.num_threads))
+        # self.sess = tf.Session(config=tf.ConfigProto(
+        #    intra_op_parallelism_threads=self.num_threads))
+        self.sess = tf.Session()
         # 'Saver' op to save and restore all the variables
         self.saver = tf.train.Saver()
 
@@ -241,7 +242,7 @@ class SeizureClassifier:
             self.sess, (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
         print('Model saved ->', save_path)
 
-    def predict(self, X_test, ids, FLAGS):
+    def predict(self, X_test, FLAGS):
         # Restore model weights from previously saved model
         self.saver.restore(
             self.sess,
@@ -254,5 +255,4 @@ class SeizureClassifier:
             dic = {self.x_pl: test_x_tensor}
             pred = self.sess.run(tf.sigmoid(self.logits), feed_dict=dic)
             predictions.append(pred)
-        np.savetxt(FLAGS.test_set + '_predictions.csv', predictions)
-        np.savetxt(FLAGS.test_set + '_predictions_ids.csv', ids, fmt='%s')
+        return predictions

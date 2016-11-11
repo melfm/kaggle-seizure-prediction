@@ -3,12 +3,12 @@
 import tensorflow as tf
 import argparse
 import sys
+import pandas as pd
 
 from rnn_network import SeizureClassifier
 from data_loader import SeizureDataset
 
-# RM
-import pdb
+
 
 # Basic model parameters as external flags.
 flags = tf.app.flags
@@ -44,7 +44,7 @@ def train_and_validate():
     print('Seizure Detection Learning')
     print('---------------------------------------------------------------')
 
-    do_train = True
+    do_train = False
 
     ds_seizure = SeizureDataset(FLAGS.input_subsample_rate,
                                 FLAGS.train_set,
@@ -73,15 +73,16 @@ def train_and_validate():
                 batch_size=FLAGS.batch_size)
             rnn_net.setup_loss()
             rnn_net.do_train(ds_seizure, X_train, y_train, FLAGS)
-            print('Final evaluation on the training data')
-            print('---------------------------------------------------------------')
-            rnn_net.do_eval(X_train[0:10], y_train[0:10])
+            #print('Final evaluation on the training data')
+            #print('---------------------------------------------------------------')
+            #rnn_net.do_eval(X_train[0:10], y_train[0:10])
 
         # At this point we are done with the training data
         del X_train
         del y_train
 
-    print('Done with training, restarting graph node')
+    print('Testing')
+    print('---------------------------------------------------------------')
     X_test, ids = ds_seizure.load_test_data(FLAGS.test_set)
     with tf.Graph().as_default():
         # create and train the network
@@ -89,7 +90,18 @@ def train_and_validate():
             input_timestep=FLAGS.input_subsample_rate,
             batch_size=FLAGS.batch_size)
         rnn_net.setup_loss()
-        rnn_net.predict(X_test, ids, FLAGS)
+        predictions = rnn_net.predict(X_test, FLAGS)
+        # Save the results
+        frame = pd.DataFrame(
+            {'File': ids,
+             'Class': predictions
+             })
+        cols = frame.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        frame = frame[cols]
+        frame['Class'] = frame['Class'].astype(float)
+        frame.to_csv(FLAGS.test_set + '_res.csv', index = False)
+        print('Saved results in: ', FLAGS.test_set)
 
 
 def main(_):
@@ -111,7 +123,7 @@ if __name__ == '__main__':
         type=str,
         default='/tmp/seizureclassifier',
      help='Directory for storing data')
-    parser.add_argument('--train_set', type=str, default='train_1_dummy',
+    parser.add_argument('--train_set', type=str, default='train_2',
                         help='Directory for storing data')
     parser.add_argument('--test_set', type=str, default='test_1_dummy',
                         help='Directory for storing data')

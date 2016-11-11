@@ -1,12 +1,10 @@
 #! /usr/bin/env/ python2
 from scipy.signal import resample
 from operator import itemgetter
-import matplotlib.pyplot as plt
 import scipy.io
 import numpy as np
 import pandas as pd
 import random
-import pdb
 import os
 from sklearn import preprocessing
 
@@ -117,7 +115,7 @@ class SeizureDataset:
 
         #inter_count = 500
         inter_count = 2
-        preic_count =1
+        preic_count = 1
 
         data_random_interictal = np.random.choice(
             all_data[all_data['class'] == self.INTERICTAL_CLASS],
