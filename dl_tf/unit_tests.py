@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 from data_loader import SeizureDataset
-
+import pdb
 
 class DataLoaderTest(unittest.TestCase):
 
@@ -110,7 +110,7 @@ class DataLoaderTest(unittest.TestCase):
             base_dir_train, shuffled_dataset['file'],
             self.ds.input_subsample_rate)
 
-        data_indx = 3
+        data_indx = 0
         chan = 1
         plt.plot(eeg_data[data_indx][chan, :])
         # plt.show()
@@ -224,7 +224,7 @@ class DataLoaderTest(unittest.TestCase):
         self.assertIsNotNone(batch_ys)
 
     def test_evaluation_loader(self):
-        self.ds.input_subsample_rate = 20
+        self.ds.input_subsample_rate = 240000/160
         eval_size = 2
         X_train, y_train = self.ds.load_train_data('train_1_dummy')
         X_train_eval_sampl, y_train_eval_sampl = self.ds.get_evaluation_set(
@@ -235,12 +235,35 @@ class DataLoaderTest(unittest.TestCase):
         self.assertEqual(len(X_train_eval_sampl), eval_size, 'Wrong eval size')
         self.assertEqual(len(y_train_eval_sampl), eval_size, 'Wrong eval size')
         self.assertIsInstance(y_train_eval_sampl[0], np.float32)
+        # If this fails, double check the subsample rate
         self.assertEqual(
             X_train_eval_sampl[0].shape,
             (16,
              self.ds.input_subsample_rate),
             'Size of the subsampled data does not match the original data')
 
+
+    def test_data_sampler(self):
+
+        dummy_matrix = np.array(
+            [[-0.13130315,  -3.13130307,  -9.13130283, 24.86869621,
+                23.86869621,  28.86869621],
+             [2.33613181,  5.33613157,  18.33613205, 30.33613205,
+                36.33613205,  28.33613205],
+             [-26.15572548, -35.15572357, -39.15572357, 3.84427452,
+                4.84427452,   4.84427452]])
+        dummy_matrix_downsampl = np.array(
+                [[-0.13130315, -9.13130283,  23.86869621],
+                 [2.33613181,  18.33613205,  36.33613205],
+                 [-26.15572548, -39.15572357,   4.84427452]])
+
+        downsample_rate = 2
+        subsampled_mat = self.ds.subsample_data(dummy_matrix, downsample_rate)
+        self.assertEqual(
+            subsampled_mat.shape, (3, 3),
+            'Mismatch in downsampled size')
+        self.assertTrue(np.array_equal(subsampled_mat, dummy_matrix_downsampl),
+                        'Downsampled matrices do not match')
 
 if __name__ == '__main__':
     unittest.main()

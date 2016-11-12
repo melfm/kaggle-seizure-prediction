@@ -116,8 +116,8 @@ class SeizureDataset:
             inter_count = inter_count-19
 
         #inter_count = 500
-        inter_count = 2
-        preic_count = 1
+        #inter_count = 2
+        #preic_count = 1
 
         data_random_interictal = np.random.choice(
             all_data[all_data['class'] == self.INTERICTAL_CLASS],
@@ -170,20 +170,12 @@ class SeizureDataset:
             # Gets a 16x240000 matrix => 16 channels reading data for 10 minutes at
             # 400Hz
             channels_data_nn = mat_data['dataStruct'][0][0][0].transpose()
-            channel_columns = channels_data_nn.shape[0]
-            timestep_rows = channels_data_nn.shape[1]
-            indices = np.arange(0, (timestep_rows - 1), 160)
-
-            eeg_subsampl = np.zeros((channel_columns, len(indices)))
-            for i in range((channel_columns-1)):
-                eeg_subsampl[i][:] = itemgetter(*indices)(channels_data_nn[i])
-
+            eeg_subsampl = self.subsample_data(channels_data_nn, 160)
             # Resamble each channel to get data at 100Hz
-            #channels_data_nn = resample(channels_data_nn,
+            # channels_data_nn = resample(channels_data_nn,
             #                            1500,
             #                            axis=1,
             #                            window=400)
-            pdb.set_trace()
             # drop if nan
             df = pd.DataFrame(eeg_subsampl, index=None)
             df = df.dropna()
@@ -193,6 +185,17 @@ class SeizureDataset:
             file_ids.append(filename)
 
         return eeg_data, file_ids
+
+    def subsample_data(self, channels_data, rate):
+        channel_columns = channels_data.shape[0]
+        timestep_rows = channels_data.shape[1]
+        indices = np.arange(0, (timestep_rows - 1), rate)
+
+        eeg_subsampl = np.zeros((channel_columns, len(indices)))
+        for i in range(channel_columns):
+            eeg_subsampl[i][:] = itemgetter(*indices)(channels_data[i])
+
+        return eeg_subsampl
 
     def load_train_data(self, train_set_name):
         print('Using subsample rate', self.input_subsample_rate)
