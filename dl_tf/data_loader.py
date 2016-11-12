@@ -1,4 +1,5 @@
 #! /usr/bin/env/ python2
+from sklearn import preprocessing
 from scipy.signal import resample
 from operator import itemgetter
 import scipy.io
@@ -6,7 +7,7 @@ import numpy as np
 import pandas as pd
 import random
 import os
-from sklearn import preprocessing
+
 import pdb
 import matplotlib.pyplot as plt
 
@@ -21,18 +22,14 @@ class SeizureDataset:
 
     path_to_all_datasets = os.path.abspath(os.path.join(
                         '..', 'data_dir/Kaggle_data/data'))
-
     safe_label_files = 'train_and_test_data_labels_safe.csv'
 
-    def __init__(self,
-                 input_subsample_rate=1000,
-                 train_set='train_1',
-                 test_set='test_1_new',
-                 batch_size=1):
-        self.input_subsample_rate = input_subsample_rate
-        self.train_set = train_set
-        self.test_set = test_set
-        self.batch_size = batch_size
+    def __init__(self, FLAGS):
+
+        self.input_subsample_rate = FLAGS.input_subsample_rate
+        self.train_set = FLAGS.train_set
+        self.test_set = FLAGS.test_set
+        self.batch_size = FLAGS.batch_size
 
         self.index_0 = 0
         self.batch_index = self.batch_size
@@ -114,6 +111,10 @@ class SeizureDataset:
         # Need a dataset size divisible by batch size
         if (data_dir_name == 'train_1'):
             inter_count = inter_count-19
+        if (data_dir_name == 'train_2'):
+            inter_count = inter_count-86
+        if (data_dir_name == 'train_3'):
+            inter_count = inter_count-8
 
         #inter_count = 500
         #inter_count = 2
@@ -170,9 +171,10 @@ class SeizureDataset:
             # Gets a 16x240000 matrix => 16 channels reading data for 10 minutes at
             # 400Hz
             channels_data_nn = mat_data['dataStruct'][0][0][0].transpose()
-            eeg_subsampl = self.subsample_data(channels_data_nn, 160)
+            eeg_subsampl = self.subsample_data(channels_data_nn, self.input_subsample_rate)
             # Resamble each channel to get data at 100Hz
-            # channels_data_nn = resample(channels_data_nn,
+            # If switching to this method, rate is 240000/input_subsample_rate
+            # eeg_subsampl = resample(channels_data_nn,
             #                            1500,
             #                            axis=1,
             #                            window=400)
@@ -198,7 +200,6 @@ class SeizureDataset:
         return eeg_subsampl
 
     def load_train_data(self, train_set_name):
-        print('Using subsample rate', self.input_subsample_rate)
         data_interictal, data_preictal = self.pick_random_observation(
                                                                       train_set_name)
         shuffled_dataset = self.merge_and_shuffle_selection(data_interictal,

@@ -15,18 +15,15 @@ import numpy as np
 import time
 import math
 import os
-#import pdb
+import pdb
 
 
 class SeizureClassifier:
 
     def __init__(self,
+                 FLAGS,
                  input_dim=16,
-                 input_timestep=1000,
-                 output_classes=1,
-                 batch_size=20,
-                 hidden1_units=100,
-                 pos_weight=2
+                 output_classes=1
                  ):
         """ Initialize the network variables
         Args:
@@ -36,11 +33,11 @@ class SeizureClassifier:
             hidden1_units: Size of the first hidden layer
         """
         self.input_dim = input_dim
-        self.input_timestep = input_timestep
+        self.input_timestep = FLAGS.signal_duration/FLAGS.input_subsample_rate
         self.output_classes = output_classes
-        self.batch_size = batch_size
-        self.hidden1_units = hidden1_units
-        self.pos_weight = pos_weight
+        self.batch_size = FLAGS.batch_size
+        self.hidden1_units = FLAGS.hidden1_units
+        self.pos_weight = FLAGS.pos_weight
 
         self.num_threads = 5
 
@@ -213,16 +210,17 @@ class SeizureClassifier:
             print("Epoch:", '%04d' %
                   (epoch + 1), "cost=", "{:.9f}".format(c))
 
-            if ((epoch+1) % 5 == 0) or (epoch+1) == FLAGS.epochs \
-                    or FLAGS.eval_net:
-                print("Evaluation after %d epochs" % epoch)
-                eval_size = 2
+            if ((epoch+1) % 5 == 0) or (epoch) == FLAGS.epochs \
+                    & FLAGS.eval_net:
+                print("Evaluation after %d epochs" % (epoch+1))
+                eval_size = FLAGS.eval_size
                 if(FLAGS.eval_rand):
                     X_train_eval_sampl, y_train_eval_sampl = data_handler.get_evaluation_set(
                                                         X_train, y_labels, eval_size)
 
                     self.do_eval(X_train_eval_sampl, y_train_eval_sampl)
                 else:
+                    print('Doing a random eval')
                     self.do_eval(X_train[0:eval_size], y_labels[0:eval_size])
             # Reset the data handler index
             #data_handler.index_0 = 0
@@ -231,7 +229,7 @@ class SeizureClassifier:
         print("Optimization Finishes!")
         # Do training here
         duration = time.time() - start_time
-        print('Training duration: %.3f sec', duration)
+        print('Training duration: %.3f ', duration)
         train_writer.close()
         # Save the final model to disk
         if not os.path.exists(FLAGS.model_dir):

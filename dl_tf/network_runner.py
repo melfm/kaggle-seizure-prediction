@@ -1,14 +1,11 @@
 #!/usr/bin/env/ python2
-
-import tensorflow as tf
 import argparse
-import sys
 import pandas as pd
+import tensorflow as tf
+import sys
 
 from rnn_network import SeizureClassifier
 from data_loader import SeizureDataset
-
-
 
 # Basic model parameters as external flags.
 flags = tf.app.flags
@@ -23,13 +20,7 @@ flags.DEFINE_string(
      'Directory for summaries')
 flags.DEFINE_string('train_set', 'train_1', 'Name of the training set.')
 flags.DEFINE_string('test_set', 'test_1_new', 'Name of the training set.')
-flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-flags.DEFINE_integer('epochs', 20, 'Number of steps to run trainer.')
-flags.DEFINE_integer(
-    'input_subsample_rate',
-    5000,
-     'Subsampling original input.')
-flags.DEFINE_integer('batch_size', 50, 'Size of batches of data to train on.')
+flags.DEFINE_integer('signal_duration', 240000, 'EEG Signal timesteps.')
 flags.DEFINE_boolean('report_train', True, 'If true, performs evaluation and '
                      'report the results at each num_steps iteration')
 flags.DEFINE_boolean('eval_net', True, 'If true, perform evaluation after '
@@ -37,8 +28,18 @@ flags.DEFINE_boolean('eval_net', True, 'If true, perform evaluation after '
 flags.DEFINE_boolean(
     'eval_rand',
     True,
-     'If true, perform evaluation on random set')
+    'If true, perform evaluation on random set')
 
+flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
+flags.DEFINE_integer('epochs', 20, 'Number of steps to run trainer.')
+flags.DEFINE_integer(
+    'input_subsample_rate',
+    160,
+    'Subsampling original input.')
+flags.DEFINE_integer('batch_size', 50, 'Size of batches of data to train on.')
+flags.DEFINE_integer('hidden1_units', 100, 'Size of hidden1 neurons.')
+flags.DEFINE_integer('pos_weight', 2, 'Weighted cross entropy const.')
+flags.DEFINE_integer('eval_size', 5, 'Evaluation set size.')
 
 def train_and_validate():
     print('Seizure Detection Learning')
@@ -46,10 +47,7 @@ def train_and_validate():
 
     do_train = True
 
-    ds_seizure = SeizureDataset(FLAGS.input_subsample_rate,
-                                FLAGS.train_set,
-                                FLAGS.test_set,
-                                batch_size=FLAGS.batch_size)
+    ds_seizure = SeizureDataset(FLAGS)
 
     if do_train:
         X_train, y_train = ds_seizure.load_train_data(FLAGS.train_set)
@@ -68,14 +66,12 @@ def train_and_validate():
 
         with tf.Graph().as_default():
             # create and train the network
-            rnn_net = SeizureClassifier(
-                input_timestep=FLAGS.input_subsample_rate,
-                batch_size=FLAGS.batch_size)
+            rnn_net = SeizureClassifier(FLAGS)
             rnn_net.setup_loss()
             rnn_net.do_train(ds_seizure, X_train, y_train, FLAGS)
             #print('Final evaluation on the training data')
-            #print('---------------------------------------------------------------')
-            #rnn_net.do_eval(X_train[0:10], y_train[0:10])
+            # print('---------------------------------------------------------------')
+            #rnn_net.do_eval(X_train, y_train)
 
         # At this point we are done with the training data
         del X_train
@@ -86,9 +82,7 @@ def train_and_validate():
     X_test, ids = ds_seizure.load_test_data(FLAGS.test_set)
     with tf.Graph().as_default():
         # create and train the network
-        rnn_net = SeizureClassifier(
-            input_timestep=FLAGS.input_subsample_rate,
-            batch_size=FLAGS.batch_size)
+        rnn_net = SeizureClassifier(FLAGS)
         rnn_net.setup_loss()
         predictions = rnn_net.predict(X_test, FLAGS)
         # Save the results
@@ -100,7 +94,7 @@ def train_and_validate():
         cols = cols[-1:] + cols[:-1]
         frame = frame[cols]
         frame['Class'] = frame['Class'].astype(float)
-        frame.to_csv(FLAGS.test_set + '_res.csv', index = False)
+        frame.to_csv(FLAGS.test_set + '_res.csv', index=False)
         print('Saved results in: ', FLAGS.test_set)
 
 
@@ -117,12 +111,12 @@ if __name__ == '__main__':
         '--model_dir',
         type=str,
         default='/home/melissafm/seizure_models/',
-     help='Directory for storing data')
+        help='Directory for storing data')
     parser.add_argument(
         '--summaries_dir',
         type=str,
         default='/tmp/seizureclassifier',
-     help='Directory for storing data')
+        help='Directory for storing data')
     parser.add_argument('--train_set', type=str, default='train_1_dummy',
                         help='Directory for storing data')
     parser.add_argument('--test_set', type=str, default='test_1_dummy',
@@ -131,13 +125,21 @@ if __name__ == '__main__':
                         help='Initial learning rate')
     parser.add_argument('--epochs', type=int, default=2,
                         help='Number of steps to run trainer.')
-    parser.add_argument('--input_subsample_rate', type=int, default=100,
-                        help='Number of steps to run trainer.')
+    parser.add_argument('--input_subsample_rate', type=int, default=160,
+                        help='Subsampling rate.')
+    parser.add_argument('--signal_duration', type=int, default=240000,
+                        help='EEG Signal timesteps.')
     parser.add_argument('--batch_size', type=int, default=1,
                         help='Number of steps to run trainer.')
+    parser.add_argument('--hidden1_units', type=int, default=100,
+                        help='Number of steps to run trainer.')
+    parser.add_argument('--pos_weight', type=int, default=2,
+                        help='Weighted cross entropy const.')
     parser.add_argument('--eval_net', type=bool, default=True,
                         help='Do evaluation after a few training iterations.')
-    parser.add_argument('--eval_rand', type=bool, default=False,
+    parser.add_argument('--eval_rand', type=bool, default=True,
+                        help='Select evaluation set randomly.')
+    parser.add_argument('--eval_size', type=int, default=2,
                         help='Select evaluation set randomly.')
 
     FLAGS = parser.parse_args()

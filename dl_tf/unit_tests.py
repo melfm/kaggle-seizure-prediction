@@ -2,16 +2,22 @@
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
+from collections import namedtuple
 from data_loader import SeizureDataset
 import pdb
+
 
 class DataLoaderTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.ds = SeizureDataset(1000,
-                                'train_1_dummy',
-                                'test_1_dummy')
+        FLAGS = namedtuple('FLAGS',
+                           'input_subsample_rate train_set test_set batch_size')
+        flags = FLAGS(160,
+                      'train_1_dummy',
+                      'test_1_dummy',
+                      1)
+        cls.ds = SeizureDataset(flags)
 
     def test_label(self):
 
@@ -224,7 +230,7 @@ class DataLoaderTest(unittest.TestCase):
         self.assertIsNotNone(batch_ys)
 
     def test_evaluation_loader(self):
-        self.ds.input_subsample_rate = 240000/160
+        #self.ds.input_subsample_rate = 240000/160
         eval_size = 2
         X_train, y_train = self.ds.load_train_data('train_1_dummy')
         X_train_eval_sampl, y_train_eval_sampl = self.ds.get_evaluation_set(
@@ -236,10 +242,11 @@ class DataLoaderTest(unittest.TestCase):
         self.assertEqual(len(y_train_eval_sampl), eval_size, 'Wrong eval size')
         self.assertIsInstance(y_train_eval_sampl[0], np.float32)
         # If this fails, double check the subsample rate
+        #pdb.set_trace()
         self.assertEqual(
             X_train_eval_sampl[0].shape,
             (16,
-             self.ds.input_subsample_rate),
+             (240000/self.ds.input_subsample_rate)),
             'Size of the subsampled data does not match the original data')
 
 
