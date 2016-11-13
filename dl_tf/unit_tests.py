@@ -180,6 +180,35 @@ class DataLoaderTest(unittest.TestCase):
         self.assertEqual(batch_ys[0], 0, 'Label did not match the batch file')
         self.assertEqual(batch_ys[1], 1, 'Label did not match the batch file')
 
+        batch_xs, batch_ys = self.ds.next_training_batch(X_train,
+                                                         y_labels)
+
+        batch_xs, batch_ys = self.ds.next_training_batch(X_train,
+                                                         y_labels)
+
+        # Final batch
+        self.assertEqual(batch_xs[0], '1_140_0.mat', 'Grabbed the wrong file')
+        self.assertEqual(batch_xs[1], '1_619_0.mat', 'Grabbed the wrong file')
+        self.assertEqual(batch_ys[0], 0, 'Label did not match the batch file')
+        self.assertEqual(batch_ys[1], 0, 'Label did not match the batch file')
+
+        # One batch iteration is done, make sure the indices are reset
+        self.assertEqual(
+            self.ds.index_0,
+            0,
+            'Initial batch index not reset correctly')
+        self.assertEqual(
+            self.ds.batch_index, batch_size,
+            'Initial batch index not reset correctly')
+
+        batch_xs, batch_ys = self.ds.next_training_batch(X_train,
+                                                         y_labels)
+
+        self.assertEqual(batch_xs[0], '1_843_0.mat', 'Grabbed the wrong file')
+        self.assertEqual(batch_xs[1], '1_58_1.mat', 'Grabbed the wrong file')
+        self.assertEqual(batch_ys[0], 0, 'Label did not match the batch file')
+        self.assertEqual(batch_ys[1], 1, 'Label did not match the batch file')
+
     def test_next_batch_completion(self):
         all_data = [
             '1_843_0.mat',
@@ -208,16 +237,15 @@ class DataLoaderTest(unittest.TestCase):
         batch_xs, batch_ys = self.ds.next_training_batch(X_train,
                                                          y_labels)
 
-        self.assertEqual(self.ds.index_0, batch_size, 'Wrong index update')
-        # In this case batch*2 == len(X_train) since its the final batch
+        # After two iterations it should be set back to initial
+        self.assertEqual(self.ds.index_0, 0, 'Wrong index update')
         self.assertEqual(
             self.ds.batch_index,
-            len(X_train),
+            batch_size,
             'Wrong batch index update')
+
         batch_xs, batch_ys = self.ds.next_training_batch(X_train,
                                                          y_labels)
-
-        print('Size of index 0', self.ds.index_0)
         self.assertEqual(
             self.ds.index_0,
             batch_size,
@@ -242,13 +270,12 @@ class DataLoaderTest(unittest.TestCase):
         self.assertEqual(len(y_train_eval_sampl), eval_size, 'Wrong eval size')
         self.assertIsInstance(y_train_eval_sampl[0], np.float32)
         # If this fails, double check the subsample rate
-        #pdb.set_trace()
+        # pdb.set_trace()
         self.assertEqual(
             X_train_eval_sampl[0].shape,
             (16,
              (240000/self.ds.input_subsample_rate)),
             'Size of the subsampled data does not match the original data')
-
 
     def test_data_sampler(self):
 

@@ -231,9 +231,12 @@ class SeizureDataset:
                             y_train):
 
         if(self.batch_index == len(X_train)):
+            batch_xs = X_train[self.index_0: self.batch_index]
+            batch_ys = y_train[self.index_0: self.batch_index]
             # Reset the data handler index
             self.index_0 = 0
             self.batch_index = self.batch_size
+            return batch_xs, batch_ys
 
         batch_xs = X_train[self.index_0: self.batch_index]
         batch_ys = y_train[self.index_0: self.batch_index]
