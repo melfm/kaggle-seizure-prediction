@@ -1,9 +1,7 @@
 #! /usr/bin/env/ python2
 from sklearn import preprocessing
-from scipy.signal import resample
 from operator import itemgetter
 import scipy.io
-from scipy.signal import correlate, resample, welch, periodogram
 import numpy as np
 import pandas as pd
 import random
@@ -117,8 +115,8 @@ class SeizureDataset:
         if (data_dir_name == 'train_3'):
             inter_count = inter_count-38
 
-        # inter_count = 40
-        # preic_count = 40
+        inter_count = 10
+        preic_count = 10
 
         data_random_interictal = np.random.choice(
             all_data[all_data['class'] == self.INTERICTAL_CLASS],
@@ -171,34 +169,28 @@ class SeizureDataset:
                                                               str(ex)))
                 continue
 
-            # Gets a 16x240000 matrix => 16 channels reading data for 10 minutes at
-            # 400Hz
-            channels_data_nn = mat_data['dataStruct'][0][0][0].transpose()
-            #eeg_subsampl = self.subsample_data(channels_data_nn, self.input_subsample_rate)
-            # Resamble each channel to get data at 100Hz
-            # If switching to this method, rate is 240000/input_subsample_rate
-            channels_data = resample(channels_data_nn,
-                                        2400,
-                                        axis=1,
-                                        window=400)
+            eeg_image = mat_data['eeg_image']
+            # pdb.set_trace()
 
-            #fs = 10e3
-            # f, Pwelch_spec = welch(channels_data_nn, fs, scaling='spectrum')
-            f, PowerSpec = periodogram(channels_data)
-            #pdb.set_trace()
-            for j in range(16):
-                aux = max(PowerSpec[j])
-                if aux > max_values[j] :
-                    max_values[j] = aux
-
-            # We are dropping files, so make sure we grab the right labels
+            # make sure we grab the right labels
             if train_data:
                 label = self.get_class_from_name(filename)
                 eeg_labels.append(label)
-            eeg_data.append(PowerSpec)
+            eeg_data.append(eeg_image)
             file_ids.append(filename)
 
         return eeg_data, file_ids, eeg_labels, max_values
+
+    def trans2image(self,channel_data):
+        Z = np.zeros((self.samp_count,self.samp_count))
+        fft_out = np.fft.fft(channel_data)
+        for i in xrange(self.samp_count):
+            for j in xrange(self.samp_count):
+                Z[i,j] = np.exp(-np.abs(fft_out[i])/np.abs(fft_out[j]))
+        Z = Z / np.max(Z)
+        print 'done'
+        return Z
+
 
     def subsample_data(self, channels_data, rate):
         channel_columns = channels_data.shape[0]
@@ -229,10 +221,7 @@ class SeizureDataset:
         print('label', y_train)
         assert(len(X_train) == len(y_train))
 
-
-        for i in range(len(X_train)):
-            for j in range(16):
-                X_train[i][j] = X_train[i][j] / max_values[j]
+        pdb.set_trace()
         X_train_np = X_train[0].flatten()
         for i in range(1, len(X_train)):
             X_train_np = np.vstack((X_train_np,
