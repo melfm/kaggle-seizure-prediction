@@ -10,7 +10,7 @@ class SeizureClassifier:
 
     def __init__(self,
                  FLAGS,
-                 input_dim=16,
+                 input_dim=300,
                  output_dim=1
                  ):
         """ Initialize the network variables
@@ -39,7 +39,7 @@ class SeizureClassifier:
             tf.float32,
             shape=[
                 None,
-                self.input_dim * self.input_timestep])
+                self.input_dim , self.input_timestep, 16])
         self.y_pl = tf.placeholder(tf.float32, shape=[None, self.output_dim])
         self.keep_prob = tf.placeholder(tf.float32)
 
@@ -94,8 +94,8 @@ class SeizureClassifier:
         x_image = tf.reshape(self.x_pl, [-1,
                                          self.input_dim,
                                          self.input_timestep,
-                                         1])
-        W_conv1 = self._weight_variable([5, 5, 1, 32])
+                                         16])
+        W_conv1 = self._weight_variable([5, 5, 16, 32])
         b_conv1 = self._bias_variable([32])
         h_conv1 = tf.nn.relu(self.conv2d(x_image, W_conv1) + b_conv1)
         h_pool1 = self.max_pool_2x2(h_conv1)
@@ -104,18 +104,20 @@ class SeizureClassifier:
         b_conv2 = self._bias_variable([64])
         h_conv2 = tf.nn.relu(self.conv2d(h_pool1, W_conv2) + b_conv2)
         h_pool2 = self.max_pool_2x2(h_conv2)
+        #pdb.set_trace()
 
-        W_fc1 = self._weight_variable([4 * 301 * 64, 2048])
-        b_fc1 = self._bias_variable([2048])
+        W_fc1 = self._weight_variable([75 * 75 * 64, 384])
+        b_fc1 = self._bias_variable([384])
 
-        h_pool2_flat = tf.reshape(h_pool2, [-1, 4*301*64])
+        h_pool2_flat = tf.reshape(h_pool2, [-1, 75*75*64])
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
         #self.keep_prob = tf.placeholder(tf.float32)
         h_fc1_drop = tf.nn.dropout(h_fc1, self.keep_prob)
 
-        W_fc2 = self._weight_variable([2048, 1])
+        W_fc2 = self._weight_variable([384, 1])
         b_fc2 = self._bias_variable([1])
+        #pdb.set_trace()
 
         return tf.matmul(h_fc1_drop, W_fc2) + b_fc2
 
@@ -156,11 +158,19 @@ class SeizureClassifier:
                 batch_xs, batch_ys = ds.next_training_batch(
                                         X_train,
                                         y_train)
+                #pdb.set_trace()
+                batch_ys = np.reshape(batch_ys ,(self.batch_size, 1))
                 self.sess.run(self.train_op,
                               feed_dict={
                                 self.x_pl: batch_xs,
                                 self.y_pl: batch_ys,
                                 self.keep_prob: 0.5})
+            y_val = np.reshape(y_val ,(len(y_val),1))
+            X_val = np.reshape(X_val ,(len(X_val),
+                                       self.input_dim,
+                                       self.input_timestep,
+                                       16))
+            # pdb.set_trace()
             test_accuracy = self.sess.run(accuracy,
                                           feed_dict={
                                             self.x_pl: X_val,

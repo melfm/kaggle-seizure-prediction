@@ -109,14 +109,14 @@ class SeizureDataset:
         # HACK
         # Need a dataset size divisible by batch size
         if (data_dir_name == 'train_1'):
-            inter_count = inter_count
+            inter_count = inter_count-10
         if (data_dir_name == 'train_2'):
             inter_count = inter_count-536
         if (data_dir_name == 'train_3'):
             inter_count = inter_count-38
 
-        inter_count = 10
-        preic_count = 10
+        inter_count = inter_count - 10
+        #preic_count = 140
 
         data_random_interictal = np.random.choice(
             all_data[all_data['class'] == self.INTERICTAL_CLASS],
@@ -221,14 +221,15 @@ class SeizureDataset:
         print('label', y_train)
         assert(len(X_train) == len(y_train))
 
+        '''
         pdb.set_trace()
         X_train_np = X_train[0].flatten()
         for i in range(1, len(X_train)):
             X_train_np = np.vstack((X_train_np,
                                     X_train[i].flatten()))
         y_train_np = np.reshape(np.asarray(y_train), (len(y_train), 1))
-
-        return X_train_np, y_train_np
+        '''
+        return X_train, y_train
 
     def load_test_data(self, test_set_name):
 

@@ -41,27 +41,39 @@ def train_and_validate():
     if do_train:
 
         X_train, y_train = ds_seizure.load_train_data(FLAGS.train_set)
-        print('Data sample size:', X_train.shape)
+        print('Data sample size:', X_train[0].shape)
+        print('Length of X_train', len(X_train))
         print('------------------------------------')
         print('Batch size: ', FLAGS.batch_size)
         print('------------------------------------')
 
         # Note : Make sure dataset is divisible by batch_size
+        '''
         try:
             assert(len(X_train) % FLAGS.batch_size == 0)
         except:
             print("Make sure dataset size is divisble by batch_size!")
             sys.exit(1)
+        '''
 
         with tf.Graph().as_default():
             # create and train the network
             cnn_net = SeizureClassifier(FLAGS)
             cnn_net.setup_loss_and_trainOp(FLAGS)
 
+            '''
             X_train_set = X_train
             y_train_set = y_train
+
             X_test_set = X_train
             y_test_set = y_train
+
+            '''
+            X_train_set = X_train[0:550]
+            y_train_set = y_train[0:550]
+
+            X_test_set = X_train[550:]
+            y_test_set = y_train[550:]
 
             cnn_net.do_train(ds_seizure,
                              X_train_set,
@@ -82,10 +94,10 @@ if __name__ == '__main__':
         default='/home/melissafm/seizure_models/',
         help='Directory for storing data')
 
-    parser.add_argument('--train_set', type=str, default='train_1_dummy',
+    parser.add_argument('--train_set', type=str, default='image_train_300',
                         help='Directory for storing data')
 
-    parser.add_argument('--test_set', type=str, default='test_1_dummy',
+    parser.add_argument('--test_set', type=str, default='image_test_100_mini',
                         help='Directory for storing data')
 
     parser.add_argument('--learning_rate', type=float, default=0.01,
@@ -94,10 +106,10 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=10,
                         help='Number of steps to run trainer.')
 
-    parser.add_argument('--input_timestep', type=int, default=1201,
+    parser.add_argument('--input_timestep', type=int, default=300,
                         help='Subsampling rate.')
 
-    parser.add_argument('--batch_size', type=int, default=1,
+    parser.add_argument('--batch_size', type=int, default=50,
                         help='Number of steps to run trainer.')
 
     parser.add_argument('--pos_weight', type=int, default=2,
