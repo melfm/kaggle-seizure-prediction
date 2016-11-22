@@ -80,7 +80,7 @@ for i = 1:length(subjectNames)
             disp(filePath);
             
             eeg_image = trans2image(f,800);
-            save(['/home/melissafm/Workspace/Stat441/kaggle-seizure-prediction/data_dir/Kaggle_data/data/image_train_300/' fileName], 'eeg_image');
+            save(['../../../data_dir/Kaggle_data/data/image_test_300/' fileName], 'eeg_image');
 
             % Calculate features
             %feat = calculate_features(f);
