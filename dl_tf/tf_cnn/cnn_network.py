@@ -43,19 +43,19 @@ class SeizureClassifier:
         self.y_pl = tf.placeholder(tf.float32, shape=[None, self.output_dim])
         self.keep_prob = tf.placeholder(tf.float32)
 
-        self._cnn_network()
+        # self._cnn_network()
         self.sess = tf.Session(config=tf.ConfigProto(
             intra_op_parallelism_threads=self.num_threads))
         # 'Saver' op to save and restore all the variables
-        self.saver = tf.train.Saver()
 
-        self._build_net()
         self.loss = None
         self.cross_entropy = None
         self.train_op = None
         self.sigmoid_out = None
         self.test_eval = None
         self.feed_dict = None
+        self._build_net()
+        self.saver = tf.train.Saver()
 
     def _weight_variable(self, shape):
         """Create a weight variable with appropriate initialization."""
@@ -89,37 +89,38 @@ class SeizureClassifier:
 
     def _build_net(self):
         self.y_conv = self._cnn_network()
+        self.sigmoid_out = tf.nn.sigmoid(self.y_conv)
 
     def _cnn_network(self):
         x_image = tf.reshape(self.x_pl, [-1,
                                          self.input_dim,
                                          self.input_timestep,
                                          16])
-        W_conv1 = self._weight_variable([5, 5, 16, 32])
-        b_conv1 = self._bias_variable([32])
-        h_conv1 = tf.nn.relu(self.conv2d(x_image, W_conv1) + b_conv1)
-        h_pool1 = self.max_pool_2x2(h_conv1)
+        self.W_conv1 = self._weight_variable([5, 5, 16, 32])
+        self.b_conv1 = self._bias_variable([32])
+        self.h_conv1 = tf.nn.sigmoid(self.conv2d(x_image, self.W_conv1) + self.b_conv1)
+        self.h_pool1 = self.max_pool_2x2(self.h_conv1)
 
-        W_conv2 = self._weight_variable([5, 5, 32, 64])
-        b_conv2 = self._bias_variable([64])
-        h_conv2 = tf.nn.relu(self.conv2d(h_pool1, W_conv2) + b_conv2)
-        h_pool2 = self.max_pool_2x2(h_conv2)
+        self.W_conv2 = self._weight_variable([5, 5, 32, 64])
+        self.b_conv2 = self._bias_variable([64])
+        self.h_conv2 = tf.nn.sigmoid(self.conv2d(self.h_pool1, self.W_conv2) + self.b_conv2)
+        self.h_pool2 = self.max_pool_2x2(self.h_conv2)
         #pdb.set_trace()
 
-        W_fc1 = self._weight_variable([75 * 75 * 64, 384])
-        b_fc1 = self._bias_variable([384])
+        self.W_fc1 = self._weight_variable([75 * 75 * 64, 384])
+        self.b_fc1 = self._bias_variable([384])
 
-        h_pool2_flat = tf.reshape(h_pool2, [-1, 75*75*64])
-        h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+        self.h_pool2_flat = tf.reshape(self.h_pool2, [-1, 75*75*64])
+        self.h_fc1 = tf.nn.relu(tf.matmul(self.h_pool2_flat, self.W_fc1) + self.b_fc1)
 
         #self.keep_prob = tf.placeholder(tf.float32)
-        h_fc1_drop = tf.nn.dropout(h_fc1, self.keep_prob)
+        self.h_fc1_drop = tf.nn.dropout(self.h_fc1, self.keep_prob)
 
-        W_fc2 = self._weight_variable([384, 1])
-        b_fc2 = self._bias_variable([1])
+        self.W_fc2 = self._weight_variable([384, 1])
+        self.b_fc2 = self._bias_variable([1])
         #pdb.set_trace()
 
-        return tf.matmul(h_fc1_drop, W_fc2) + b_fc2
+        return tf.matmul(self.h_fc1_drop,self.W_fc2) + self.b_fc2
 
     def setup_loss_and_trainOp(self, learning_rate):
         # Calculate the loss
@@ -143,7 +144,7 @@ class SeizureClassifier:
         # Add the op to optimize
         self.setup_loss_and_trainOp(FLAGS.learning_rate)
         # Put there somewhere
-        self.sigmoid_out = tf.nn.sigmoid(self.y_conv)
+        # self.sigmoid_out = tf.nn.sigmoid(self.y_conv)
         output = tf.round(self.sigmoid_out)
         correct_prediction = tf.equal(self.y_pl, output)
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -158,7 +159,7 @@ class SeizureClassifier:
                 batch_xs, batch_ys = ds.next_training_batch(
                                         X_train,
                                         y_train)
-                #pdb.set_trace()
+                # pdb.set_trace()
                 batch_ys = np.reshape(batch_ys ,(self.batch_size, 1))
                 self.sess.run(self.train_op,
                               feed_dict={
@@ -191,8 +192,9 @@ class SeizureClassifier:
             print("step %d, test accuracy %g" % (epoch, test_accuracy))
 
         print("best accuracy %g" % (best_accuracy))
+        pdb.set_trace()
 
-    def predict(self, ds, X_test, y_test, FLAGS):
+    def predict(self, ds, FLAGS):
 
         # Load the data and run model on test data
         print('Testing')
@@ -203,21 +205,29 @@ class SeizureClassifier:
             self.sess,
              (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
         predictions = []
-        for i in range(len(X_test)):
-            test_x = X_test[i]
-            # pdb.set_trace()
-            test_x = test_x.flatten()
-            test_x_tensor = test_x.reshape(1,  test_x.shape[0])
-            dic = {self.x_pl: test_x_tensor, self.keep_prob: 1.0}
-            pred = self.sess.run(self.sigmoid_out, feed_dict=dic)
-            predictions.append(pred)
-        # Save the results
+
+        # for i in range(len(X_test)):
+        # test_x = X_test[i]
+        # pdb.set_trace()
+        #test_x = test_x.flatten()
+        # test_x_tensor = test_x.reshape(1,  test_x.shape[0])
+        pdb.set_trace()
+        X_test = np.reshape(X_test,(len(X_test),
+                                    self.input_dim,
+                                    self.input_dim,
+                                    16))
+        dic = {self.x_pl: X_test, self.keep_prob: 1.0}
+        pred = self.sess.run(self.sigmoid_out, feed_dict=dic)
+        # predictions.append(pred)
+        # Save the results2
+        #pred = np.array(pred.tolist())
+        pdb.set_trace()
         frame = pd.DataFrame({'File': ids,
-                              'Class': predictions
+                              'Class': pred.tolist()
                               })
         cols = frame.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         frame = frame[cols]
-        frame['Class'] = frame['Class'].astype(float)
+        frame['Class'] = frame['Class']
         frame.to_csv(FLAGS.test_set + '_res.csv', index=False)
         print('Saved results in: ', FLAGS.test_set)

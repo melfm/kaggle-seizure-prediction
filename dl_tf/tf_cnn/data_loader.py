@@ -237,7 +237,8 @@ class SeizureDataset:
         print("Data set directory==>", base_dir_test)
         all_data = self.get_data_dir(test_set_name)
         #print("all data", all_data, len(all_data))
-        X_test, file_ids, _ = self.get_X_from_files(base_dir_test,
+
+        X_test, file_ids, _ , _= self.get_X_from_files(base_dir_test,
                                                  all_data,
                                                  self.input_subsample_rate,
                                                  False)
