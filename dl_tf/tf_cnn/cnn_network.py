@@ -16,18 +16,18 @@ class SeizureClassifier:
         """ Initialize the network variables
         Args:
             input_dim: Number of channels in the data i.e. column data
-            input_timestep: Number of signal time steps after subsampling
             output_classes: Number of outcomes, 0 or 1
             hidden1_units: Size of the first hidden layer
         """
         self.input_dim = input_dim
-        self.input_timestep = FLAGS.input_timestep
+        self.input_timestep = FLAGS.input_dim
         self.output_dim = output_dim
         self.batch_size = FLAGS.batch_size
         self.pos_weight = FLAGS.pos_weight
 
         self.num_threads = 5
-
+        # We have square images so input_dim and timestep
+        # are equivalent
         self.x_pl = tf.placeholder(
             tf.float32, [None, self.input_timestep, self.input_dim],
             name='x-input')
@@ -43,10 +43,8 @@ class SeizureClassifier:
         self.y_pl = tf.placeholder(tf.float32, shape=[None, self.output_dim])
         self.keep_prob = tf.placeholder(tf.float32)
 
-        # self._cnn_network()
         self.sess = tf.Session(config=tf.ConfigProto(
             intra_op_parallelism_threads=self.num_threads))
-        # 'Saver' op to save and restore all the variables
 
         self.loss = None
         self.cross_entropy = None
@@ -54,7 +52,9 @@ class SeizureClassifier:
         self.sigmoid_out = None
         self.test_eval = None
         self.feed_dict = None
+
         self._build_net()
+        # 'Saver' op to save and restore all the variables
         self.saver = tf.train.Saver()
 
     def _weight_variable(self, shape):
@@ -105,7 +105,6 @@ class SeizureClassifier:
         self.b_conv2 = self._bias_variable([64])
         self.h_conv2 = tf.nn.sigmoid(self.conv2d(self.h_pool1, self.W_conv2) + self.b_conv2)
         self.h_pool2 = self.max_pool_2x2(self.h_conv2)
-        #pdb.set_trace()
 
         self.W_fc1 = self._weight_variable([75 * 75 * 64, 384])
         self.b_fc1 = self._bias_variable([384])
@@ -113,12 +112,10 @@ class SeizureClassifier:
         self.h_pool2_flat = tf.reshape(self.h_pool2, [-1, 75*75*64])
         self.h_fc1 = tf.nn.relu(tf.matmul(self.h_pool2_flat, self.W_fc1) + self.b_fc1)
 
-        #self.keep_prob = tf.placeholder(tf.float32)
         self.h_fc1_drop = tf.nn.dropout(self.h_fc1, self.keep_prob)
 
         self.W_fc2 = self._weight_variable([384, 1])
         self.b_fc2 = self._bias_variable([1])
-        #pdb.set_trace()
 
         return tf.matmul(self.h_fc1_drop,self.W_fc2) + self.b_fc2
 
@@ -152,7 +149,7 @@ class SeizureClassifier:
         # Add the variable initializer op.
         init = tf.initialize_all_variables()
         self.sess.run(init)
-        print('Total number of 1 in validation set ', np.sum(y_val))
+        print('Total number of 1s in validation set ', np.sum(y_val))
         for epoch in xrange(FLAGS.epochs):
             total_batch = len(X_train)/ds.batch_size
             for j in range(int(total_batch)):
@@ -171,7 +168,6 @@ class SeizureClassifier:
                                        self.input_dim,
                                        self.input_timestep,
                                        16))
-            # pdb.set_trace()
             test_accuracy = self.sess.run(accuracy,
                                           feed_dict={
                                             self.x_pl: X_val,
@@ -184,6 +180,7 @@ class SeizureClassifier:
             if test_accuracy > best_accuracy:
                 best_accuracy = test_accuracy
                 self.saver.save(self.sess, (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
+                print('Saved model in :', FLAGS.model_dir)
                 pred = self.sess.run(self.sigmoid_out,
                                      feed_dict={
                                         self.x_pl: X_val,
@@ -192,7 +189,6 @@ class SeizureClassifier:
             print("step %d, test accuracy %g" % (epoch, test_accuracy))
 
         print("best accuracy %g" % (best_accuracy))
-        pdb.set_trace()
 
     def predict(self, ds, FLAGS):
 
@@ -204,26 +200,17 @@ class SeizureClassifier:
         self.saver.restore(
             self.sess,
              (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
-        predictions = []
+        print('Restored model :', FLAGS.model_dir + FLAGS.train_set + ".ckpt")
 
-        # for i in range(len(X_test)):
-        # test_x = X_test[i]
-        # pdb.set_trace()
-        #test_x = test_x.flatten()
-        # test_x_tensor = test_x.reshape(1,  test_x.shape[0])
-        pdb.set_trace()
         X_test = np.reshape(X_test,(len(X_test),
                                     self.input_dim,
                                     self.input_dim,
                                     16))
         dic = {self.x_pl: X_test, self.keep_prob: 1.0}
         pred = self.sess.run(self.sigmoid_out, feed_dict=dic)
-        # predictions.append(pred)
-        # Save the results2
-        #pred = np.array(pred.tolist())
-        pdb.set_trace()
+
         frame = pd.DataFrame({'File': ids,
-                              'Class': pred.tolist()
+                              'Class': pred.flatten()
                               })
         cols = frame.columns.tolist()
         cols = cols[-1:] + cols[:-1]
