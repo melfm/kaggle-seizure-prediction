@@ -8,10 +8,8 @@ from data_loader import SeizureDataset
 # Basic model parameters as external flags.
 flags = tf.app.flags
 FLAGS = flags.FLAGS
-flags.DEFINE_string(
-    'model_dir',
-    '/tmp/seizure_models/',
-     'Directory for trained models.')
+flags.DEFINE_string('patient_id', 1,'Patient ID, can take 1, 2 or 3')
+flags.DEFINE_string('model_dir', '/tmp/seizure_models/', 'Directory for trained models.')
 
 flags.DEFINE_string('train_set', 'train_1', 'Name of the training set.')
 flags.DEFINE_string('test_set', 'test_1_new', 'Name of the training set.')
@@ -21,7 +19,7 @@ flags.DEFINE_integer('epochs', 20, 'Number of steps to run trainer.')
 
 flags.DEFINE_integer('batch_size', 50, 'Size of batches of data to train on.')
 flags.DEFINE_integer('pos_weight', 2, 'Weighted cross entropy const.')
-flags.DEFINE_integer('input_dim', 300, 'Size of signal timestep.')
+ flags.DEFINE_integer('train_ds_ratio', 0.75, 'Weighted cross entropy const.')
 
 
 def train_and_validate():
@@ -107,16 +105,13 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=1,
                         help='Number of steps to run trainer.')
 
-    parser.add_argument('--input_dim', type=int, default=300,
-                        help='Subsampling rate.')
-
     parser.add_argument('--batch_size', type=int, default=20,
                         help='Number of steps to run trainer.')
 
-    parser.add_argument('--pos_weight', type=int, default=5,
+    parser.add_argument('--pos_weight', type=float, default=5.,
                         help='Weighted cross entropy const.')
 
-    parser.add_argument('--train_ds_ratio', type=int, default=0.75,
+    parser.add_argument('--train_ds_ratio', type=float, default=0.75,
                         help='Weighted cross entropy const.')
     FLAGS = parser.parse_args()
     tf.app.run()
