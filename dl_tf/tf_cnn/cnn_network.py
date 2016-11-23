@@ -137,6 +137,12 @@ class SeizureClassifier:
             X_val,
             y_val,
             FLAGS):
+        # Converting the lists to appropriate tensors
+        y_val = np.reshape(y_val ,(len(y_val),1))
+        X_val = np.reshape(X_val ,(len(X_val),
+                                    self.input_dim,
+                                    self.input_timestep,
+                                    16))
 
         # Add the op to optimize
         self.setup_loss_and_trainOp(FLAGS.learning_rate)
@@ -149,37 +155,29 @@ class SeizureClassifier:
         # Add the variable initializer op.
         init = tf.initialize_all_variables()
         self.sess.run(init)
+
         print('Total number of 1s in validation set ', np.sum(y_val))
         for epoch in xrange(FLAGS.epochs):
             total_batch = len(X_train)/ds.batch_size
             for j in range(int(total_batch)):
-                batch_xs, batch_ys = ds.next_training_batch(
-                                        X_train,
-                                        y_train)
-                # pdb.set_trace()
+                batch_xs, batch_ys = ds.next_training_batch(X_train,
+                                                            y_train)
                 batch_ys = np.reshape(batch_ys ,(self.batch_size, 1))
                 self.sess.run(self.train_op,
-                              feed_dict={
-                                self.x_pl: batch_xs,
-                                self.y_pl: batch_ys,
-                                self.keep_prob: 0.5})
-            y_val = np.reshape(y_val ,(len(y_val),1))
-            X_val = np.reshape(X_val ,(len(X_val),
-                                       self.input_dim,
-                                       self.input_timestep,
-                                       16))
+                              feed_dict={self.x_pl: batch_xs,
+                                         self.y_pl: batch_ys,
+                                         self.keep_prob: 0.5})
             test_accuracy = self.sess.run(accuracy,
-                                          feed_dict={
-                                            self.x_pl: X_val,
-                                            self.y_pl: y_val,
-                                            self.keep_prob: 1.0})
+                                          feed_dict={self.x_pl: X_val,
+                                                     self.y_pl: y_val,
+                                                     self.keep_prob: 1.0})
             if epoch == 0:
                 best_accuracy = test_accuracy
                 self.saver.save(self.sess,
-                                (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
+                                (FLAGS.model_dir + "model.ckpt"))
             if test_accuracy > best_accuracy:
                 best_accuracy = test_accuracy
-                self.saver.save(self.sess, (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
+                self.saver.save(self.sess, (FLAGS.model_dir +  "model.ckpt"))
                 print('Saved model in :', FLAGS.model_dir)
                 pred = self.sess.run(self.sigmoid_out,
                                      feed_dict={
@@ -199,8 +197,8 @@ class SeizureClassifier:
         # Restore model weights from previously saved model
         self.saver.restore(
             self.sess,
-             (FLAGS.model_dir + FLAGS.train_set + ".ckpt"))
-        print('Restored model :', FLAGS.model_dir + FLAGS.train_set + ".ckpt")
+             (FLAGS.model_dir + "model.ckpt"))
+        print('Restored model :', FLAGS.model_dir + "model.ckpt")
 
         X_test = np.reshape(X_test,(len(X_test),
                                     self.input_dim,

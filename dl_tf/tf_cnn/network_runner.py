@@ -35,8 +35,15 @@ def train_and_validate():
     if do_train:
 
         X_train, y_train = ds_seizure.load_train_data(FLAGS.train_set)
-        print('Data sample size:', X_train[0].shape)
-        print('Length of X_train', len(X_train))
+        train_set_size = int(round(FLAGS.train_ds_ratio * len(X_train)))
+        X_train_set = X_train[:train_set_size]
+        y_train_set = y_train[:train_set_size]
+
+        X_val_set = X_train[train_set_size:]
+        y_val_set = y_train[train_set_size:]
+        print('Data sample size = ', X_train[0].shape)
+        print('Trainig samples count = ', len(y_train_set))
+        print('Validation samples count = ', len(y_val_set))
         print('------------------------------------')
         print('Batch size: ', FLAGS.batch_size)
         print('------------------------------------')
@@ -53,17 +60,11 @@ def train_and_validate():
             cnn_net = SeizureClassifier(FLAGS)
             cnn_net.setup_loss_and_trainOp(FLAGS)
 
-            X_train_set = X_train
-            y_train_set = y_train
-
-            X_test_set = X_train[600:]
-            y_test_set = y_train[600:]
-
             cnn_net.do_train(ds_seizure,
                              X_train_set,
                              y_train_set,
-                             X_test_set,
-                             y_test_set,
+                             X_val_set,
+                             y_val_set,
                              FLAGS)
 
     # Start a new graph
@@ -78,20 +79,24 @@ def main(_):
 
 
 if __name__ == '__main__':
+
+    patient_id = 2
+
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--model_dir',
-        type=str,
-        default='/tmp/',
-        help='Directory for storing data')
 
-    parser.add_argument(
-        '--train_set',
-        type=str,
-        default='image_train_1_300',
-     help='Directory for storing data')
+    parser.add_argument('--patient_id', type=str, default=patient_id,
+                        help='Patient ID, can take1, 2 or 3')
 
-    parser.add_argument('--test_set', type=str, default='image_test_1_300',
+    parser.add_argument('--model_dir', type=str,
+                        default='/home/n2mohaje/seizure_models/rings/patient_{0}/'.format(
+                            patient_id),
+                        help='Directory for storing data')
+    parser.add_argument('--train_set', type=str, default='image_train_{0}_300/rings/'.format(
+                            patient_id),
+                        help='Directory for storing data')
+
+    parser.add_argument('--test_set', type=str, default='image_test_{0}_300/rings/'.format(
+                            patient_id),
                         help='Directory for storing data')
 
     parser.add_argument('--learning_rate', type=float, default=0.01,
@@ -106,8 +111,10 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=20,
                         help='Number of steps to run trainer.')
 
-    parser.add_argument('--pos_weight', type=int, default=2,
+    parser.add_argument('--pos_weight', type=int, default=5,
                         help='Weighted cross entropy const.')
 
+    parser.add_argument('--train_ds_ratio', type=int, default=0.75,
+                        help='Weighted cross entropy const.')
     FLAGS = parser.parse_args()
     tf.app.run()

@@ -108,12 +108,12 @@ class SeizureDataset:
         # dataset and penalizing non-positives more
         # HACK
         # Need a dataset size divisible by batch size
-        if (data_dir_name == 'train_1'):
-            inter_count = inter_count-10
-        if (data_dir_name == 'train_2'):
-            inter_count = inter_count-536
-        if (data_dir_name == 'train_3'):
-            inter_count = inter_count-38
+        # if (data_dir_name == 'train_1'):
+        #     inter_count = inter_count-10
+        # if (data_dir_name == 'train_2'):
+        #     inter_count = inter_count-536
+        # if (data_dir_name == 'train_3'):
+        #     inter_count = inter_count-38
 
         # inter_count = inter_count - 8
         #preic_count = 140
