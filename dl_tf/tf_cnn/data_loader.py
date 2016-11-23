@@ -115,7 +115,7 @@ class SeizureDataset:
         if (data_dir_name == 'train_3'):
             inter_count = inter_count-38
 
-        inter_count = inter_count - 10
+        # inter_count = inter_count - 8
         #preic_count = 140
 
         data_random_interictal = np.random.choice(
@@ -258,6 +258,8 @@ class SeizureDataset:
         batch_ys = y_train[self.index_0: self.batch_index]
         self.index_0 += self.batch_size
         self.batch_index += self.batch_size
+        if self.index_0 + self.batch_size > len(X_train):
+            self.index_0 = len(X_train) - self.batch_size
         return batch_xs, batch_ys
 
     def get_evaluation_set(self,

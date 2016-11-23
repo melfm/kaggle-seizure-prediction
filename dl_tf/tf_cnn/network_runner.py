@@ -42,11 +42,11 @@ def train_and_validate():
         print('------------------------------------')
 
         # Note : Make sure dataset is divisible by batch_size
-        try:
-            assert(len(X_train) % FLAGS.batch_size == 0)
-        except:
-            print("Make sure dataset size is divisble by batch_size!")
-            sys.exit(1)
+        # try:
+        #     assert(len(X_train) % FLAGS.batch_size == 0)
+        # except:
+        #     print("Make sure dataset size is divisble by batch_size!")
+        #     sys.exit(1)
 
         with tf.Graph().as_default():
             # create and train the network
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--model_dir',
         type=str,
-        default='/tmp/seizure_models/',
+        default='/tmp/',
         help='Directory for storing data')
 
     parser.add_argument(
