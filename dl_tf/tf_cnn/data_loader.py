@@ -24,8 +24,6 @@ class SeizureDataset:
     safe_label_files = 'train_and_test_data_labels_safe.csv'
 
     def __init__(self, FLAGS):
-        # Not being used atm
-        self.input_subsample_rate = 0#FLAGS.input_subsample_rate
         self.train_set = FLAGS.train_set
         self.test_set = FLAGS.test_set
         self.batch_size = FLAGS.batch_size
@@ -101,20 +99,6 @@ class SeizureDataset:
         print('Interictal/0 samples:', inter_count)
         print('Preictal/1 samples:', preic_count)
 
-        # data_random_interictal = np.random.choice(
-        #    all_data[all_data['class'] == INTERICTAL_CLASS],
-        #    size=round(preic_count + (train_class_ratio * inter_count)))
-        # Just load everything since we have a more balanced
-        # dataset and penalizing non-positives more
-        # HACK
-        # Need a dataset size divisible by batch size
-        # if (data_dir_name == 'train_1'):
-        #     inter_count = inter_count-10
-        # if (data_dir_name == 'train_2'):
-        #     inter_count = inter_count-536
-        # if (data_dir_name == 'train_3'):
-        #     inter_count = inter_count-38
-
         # inter_count = inter_count - 8
         #preic_count = 140
 
@@ -136,7 +120,6 @@ class SeizureDataset:
         return data_files
 
     def normalize(self, x):
-        #x = df.values
         min_max_scaler = preprocessing.MinMaxScaler()
         x_scaled = min_max_scaler.fit_transform(x)
         return x_scaled
@@ -144,14 +127,12 @@ class SeizureDataset:
     def get_X_from_files(self,
                          data_dir_base,
                          data_files,
-                         sub_sample_rate,
-                         train_data = True,
+                         train_data=True,
                          show_progress=True):
 
         eeg_data = []
         eeg_labels = []
         file_ids = []
-        max_values = np.zeros(16)
         print(data_dir_base)
 
         total_files = len(data_files)
@@ -170,7 +151,6 @@ class SeizureDataset:
                 continue
 
             eeg_image = mat_data['eeg_image']
-            # pdb.set_trace()
 
             # make sure we grab the right labels
             if train_data:
@@ -179,8 +159,9 @@ class SeizureDataset:
             eeg_data.append(eeg_image)
             file_ids.append(filename)
 
-        return eeg_data, file_ids, eeg_labels, max_values
+        return eeg_data, file_ids, eeg_labels
 
+    '''
     def trans2image(self,channel_data):
         Z = np.zeros((self.samp_count,self.samp_count))
         fft_out = np.fft.fft(channel_data)
@@ -190,7 +171,7 @@ class SeizureDataset:
         Z = Z / np.max(Z)
         print 'done'
         return Z
-
+    '''
 
     def subsample_data(self, channels_data, rate):
         channel_columns = channels_data.shape[0]
@@ -213,21 +194,15 @@ class SeizureDataset:
 
         base_dir_train = self.path_to_all_datasets + '/' + train_set_name
         print("Data set directory==>", base_dir_train)
-        X_train, labels, y_train, max_values = self.get_X_from_files(base_dir_train,
-                                           shuffled_dataset['file'],
-                                           self.input_subsample_rate)
-        #y_train = shuffled_dataset['class']
+        X_train, labels, y_train = self.get_X_from_files(
+            base_dir_train, shuffled_dataset['file'])
+        y_train_or = shuffled_dataset['class']
+
+        assert(np.array_equal(y_train, y_train_or))
         print('filename', labels)
         print('label', y_train)
         assert(len(X_train) == len(y_train))
-        '''
-        pdb.set_trace()
-        X_train_np = X_train[0].flatten()
-        for i in range(1, len(X_train)):
-            X_train_np = np.vstack((X_train_np,
-                                    X_train[i].flatten()))
-        y_train_np = np.reshape(np.asarray(y_train), (len(y_train), 1))
-        '''
+
         return X_train, y_train
 
     def load_test_data(self, test_set_name):
@@ -236,10 +211,8 @@ class SeizureDataset:
         all_data = self.get_data_dir(test_set_name)
         #print("all data", all_data, len(all_data))
 
-        X_test, file_ids, _ , _= self.get_X_from_files(base_dir_test,
-                                                 all_data,
-                                                 self.input_subsample_rate,
-                                                 False)
+        X_test, file_ids, _ = self.get_X_from_files(
+            base_dir_test, all_data,  False)
         return X_test, file_ids
 
     def next_training_batch(self,
@@ -273,4 +246,3 @@ class SeizureDataset:
         y_train_sampl = itemgetter(*rand_indices)(y_train)
         print('Number of 1 cases', sum(y_train_sampl))
         return X_train_sampl, y_train_sampl
-
