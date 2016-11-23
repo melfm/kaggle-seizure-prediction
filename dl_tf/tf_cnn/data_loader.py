@@ -24,8 +24,6 @@ class SeizureDataset:
     safe_label_files = 'train_and_test_data_labels_safe.csv'
 
     def __init__(self, FLAGS):
-        # Not being used atm
-        self.input_subsample_rate = 0  # FLAGS.input_subsample_rate
         self.train_set = FLAGS.train_set
         self.test_set = FLAGS.test_set
         self.batch_size = FLAGS.batch_size
@@ -214,7 +212,7 @@ class SeizureDataset:
         #print("all data", all_data, len(all_data))
 
         X_test, file_ids, _, _ = self.get_X_from_files(
-            base_dir_test, all_data, self.input_subsample_rate, False)
+            base_dir_test, all_data,  False)
         return X_test, file_ids
 
     def next_training_batch(self,
