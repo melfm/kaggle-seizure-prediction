@@ -19,7 +19,7 @@ flags.DEFINE_integer('epochs', 20, 'Number of steps to run trainer.')
 
 flags.DEFINE_integer('batch_size', 50, 'Size of batches of data to train on.')
 flags.DEFINE_integer('pos_weight', 2, 'Weighted cross entropy const.')
- flags.DEFINE_integer('train_ds_ratio', 0.75, 'Weighted cross entropy const.')
+flags.DEFINE_integer('train_ds_ratio', 0.75, 'Weighted cross entropy const.')
 
 
 def train_and_validate():
@@ -86,7 +86,7 @@ if __name__ == '__main__':
                         help='Patient ID, can take 1, 2 or 3')
 
     parser.add_argument('--model_dir', type=str,
-                        default='/home/n2mohaje/seizure_models/rings/patient_{0}/'.format(
+                        default='/home/melissafm/seizure_models/parcheh/patient_{0}/'.format(
                             patient_id),
                         help='Directory for storing data')
     # parser.add_argument('--train_set', type=str, default='image_train_{0}_300/rings/'.format(
