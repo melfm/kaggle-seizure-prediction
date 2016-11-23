@@ -13,8 +13,12 @@ class SeizureClassifier:
                  height = 300,
                  width = 300,
                  depth = 16,
-                 output_dim = 1
-                 ):
+                 output_dim = 1,
+                 patch_size_1 = 5,
+                 patch_size_2 = 7,
+                 feature_size_1 = 64,
+                 feature_size_2 = 128,
+                 fc_size = 1024):
         """ Initialize the network variables
         Args:
             width : Number of time steps (or frequencies), i.e. column data
@@ -30,8 +34,13 @@ class SeizureClassifier:
         self.batch_size = FLAGS.batch_size
         self.pos_weight = FLAGS.pos_weight
 
-        self.num_threads = 5
+        self.num_threads = 12
 
+        self.patch_size_1 = patch_size_1
+        self.patch_size_2 = patch_size_2
+        self.feature_size_1 = feature_size_1
+        self.feature_size_2 = feature_size_2
+        self.fc_size = fc_size
         # place holder definitions
 
         self.x_pl = tf.placeholder(tf.float32,
@@ -100,28 +109,47 @@ class SeizureClassifier:
                                          self.height,
                                          self.width,
                                          self.depth])
-        self.W_conv1 = self._weight_variable([5, 5, self.depth, 32])
-        self.b_conv1 = self._bias_variable([32])
-        self.h_conv1 = tf.nn.sigmoid(self.conv2d(x_image, self.W_conv1) + self.b_conv1)
-        self.h_pool1 = self.max_pool_2x2(self.h_conv1)
+        W_conv1 = self._weight_variable([self.patch_size_1,
+                                         self.patch_size_1,
+                                         self.depth,
+                                         self.feature_size_1])
+        b_conv1 = self._bias_variable([self.feature_size_1])
+        h_conv1 = tf.nn.sigmoid(self.conv2d(x_image, W_conv1) + b_conv1)
+        h_pool1 = self.max_pool_2x2(h_conv1)
 
-        self.W_conv2 = self._weight_variable([5, 5, 32, 64])
-        self.b_conv2 = self._bias_variable([64])
-        self.h_conv2 = tf.nn.sigmoid(self.conv2d(self.h_pool1, self.W_conv2) + self.b_conv2)
-        self.h_pool2 = self.max_pool_2x2(self.h_conv2)
+        W_conv2 = self._weight_variable([self.patch_size_2,
+                                         self.patch_size_2,
+                                         self.feature_size_1,
+                                         self.feature_size_2])
+        b_conv2 = self._bias_variable([self.feature_size_2])
+        h_conv2 = tf.nn.sigmoid(self.conv2d(h_pool1, W_conv2) + b_conv2)
+        h_pool2 = self.max_pool_2x2(h_conv2)
 
-        self.W_fc1 = self._weight_variable([75 * 75 * 64, 384])
-        self.b_fc1 = self._bias_variable([384])
+        dummy_input = np.random.rand(1,
+                                     self.height,
+                                     self.width,
+                                     self.depth)
+        _sess = tf.Session()
+        _init = tf.initialize_all_variables()
+        _sess.run(_init)
+        aux = _sess.run(h_pool2,feed_dict = {self.x_pl: dummy_input,
+                                             self.keep_prob: 1.0})
 
-        self.h_pool2_flat = tf.reshape(self.h_pool2, [-1, 75*75*64])
-        self.h_fc1 = tf.nn.relu(tf.matmul(self.h_pool2_flat, self.W_fc1) + self.b_fc1)
 
-        self.h_fc1_drop = tf.nn.dropout(self.h_fc1, self.keep_prob)
+        W_fc1 = self._weight_variable([aux.shape[1] * aux.shape[2] * self.feature_size_2,
+                                       self.fc_size])
+        b_fc1 = self._bias_variable([self.fc_size])
 
-        self.W_fc2 = self._weight_variable([384, 1])
-        self.b_fc2 = self._bias_variable([1])
+        h_pool2_flat = tf.reshape(h_pool2,
+                                  [-1, aux.shape[1] * aux.shape[2] * self.feature_size_2])
+        h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
-        return tf.matmul(self.h_fc1_drop,self.W_fc2) + self.b_fc2
+        h_fc1_drop = tf.nn.dropout(h_fc1, self.keep_prob)
+
+        W_fc2 = self._weight_variable([self.fc_size, 1])
+        b_fc2 = self._bias_variable([1])
+
+        return tf.matmul(h_fc1_drop,W_fc2) + b_fc2
 
     def setup_loss_and_trainOp(self, learning_rate):
         # Calculate the loss
@@ -165,11 +193,13 @@ class SeizureClassifier:
 
             if epoch == 0:
                 best_accuracy = test_accuracy
-                self.saver.save(self.sess,
-                                (FLAGS.model_dir + "model.ckpt"))
+                if FLAGS.save:
+                    self.saver.save(self.sess,
+                                    (FLAGS.model_dir + "model.ckpt"))
             if test_accuracy > best_accuracy:
                 best_accuracy = test_accuracy
-                self.saver.save(self.sess, (FLAGS.model_dir +  "model.ckpt"))
+                if FLAGS.save:
+                    self.saver.save(self.sess, (FLAGS.model_dir +  "model.ckpt"))
                 print('Saved model in :', FLAGS.model_dir)
                 pred = self.sess.run(self.sigmoid_out,
                                      feed_dict={

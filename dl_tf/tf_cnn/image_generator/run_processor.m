@@ -3,7 +3,7 @@ close all; clear;  clc;
 
 % In total there are three patients
 %subjectNames = {'train_1','train_2','train_3','test_1','test_2','test_3'};
-subjectNames = {'train_2'};
+subjectNames = {'train_3'};
 segmentTypes = {'0','1'}; % Preictal (1) or interictal (0)
 
 

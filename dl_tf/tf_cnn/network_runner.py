@@ -1,4 +1,4 @@
-#!/usr/bin/env/ python2
+#!/usr/
 import argparse
 import tensorflow as tf
 import sys
@@ -20,9 +20,20 @@ flags.DEFINE_integer('epochs', 20, 'Number of steps to run trainer.')
 flags.DEFINE_integer('batch_size', 50, 'Size of batches of data to train on.')
 flags.DEFINE_integer('pos_weight', 2, 'Weighted cross entropy const.')
 flags.DEFINE_integer('train_ds_ratio', 0.75, 'Weighted cross entropy const.')
+flags.DEFINE_integer('save', True, 'Set to True to save the best model.')
 
 
 def train_and_validate():
+    height = 300
+    width = 300
+    depth = 16
+    output_dim = 1
+    patch_size_1 = 3
+    patch_size_2 = 5
+    feature_size_1 = 64
+    feature_size_2 = 128
+    fc_size = 2048
+
     print('Seizure Detection Learning')
     print('---------------------------------------------------------------')
 
@@ -55,7 +66,16 @@ def train_and_validate():
 
         with tf.Graph().as_default():
             # create and train the network
-            cnn_net = SeizureClassifier(FLAGS)
+            cnn_net = SeizureClassifier(FLAGS,
+                                        height,
+                                        width,
+                                        depth,
+                                        output_dim,
+                                        patch_size_1,
+                                        patch_size_2,
+                                        feature_size_1,
+                                        feature_size_2,
+                                        fc_size)
             cnn_net.setup_loss_and_trainOp(FLAGS)
 
             cnn_net.do_train(ds_seizure,
@@ -67,7 +87,16 @@ def train_and_validate():
 
     # Start a new graph
     with tf.Graph().as_default():
-        cnn_net = SeizureClassifier(FLAGS)
+        cnn_net = SeizureClassifier(FLAGS,
+                                    height,
+                                    width,
+                                    depth,
+                                    output_dim,
+                                    patch_size_1,
+                                    patch_size_2,
+                                    feature_size_1,
+                                    feature_size_2,
+                                    fc_size)
         cnn_net.setup_loss_and_trainOp(FLAGS)
         cnn_net.predict(ds_seizure, FLAGS)
 
@@ -105,7 +134,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=100,
                         help='Number of steps to run trainer.')
 
-    parser.add_argument('--batch_size', type=int, default=30,
+    parser.add_argument('--batch_size', type=int, default=50,
                         help='Number of steps to run trainer.')
 
     parser.add_argument('--pos_weight', type=float, default=2.,
@@ -113,5 +142,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--train_ds_ratio', type=float, default=0.75,
                         help='Weighted cross entropy const.')
+    parser.add_argument('--save', type=bool, default=False,
+                        help='Set to True to save the best model.')
     FLAGS = parser.parse_args()
     tf.app.run()
