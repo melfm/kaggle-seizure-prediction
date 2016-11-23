@@ -56,8 +56,8 @@ def train_and_validate():
             X_train_set = X_train
             y_train_set = y_train
 
-            X_test_set = X_train
-            y_test_set = y_train
+            X_test_set = X_train[600:]
+            y_test_set = y_train[600:]
 
             cnn_net.do_train(ds_seizure,
                              X_train_set,
@@ -88,22 +88,22 @@ if __name__ == '__main__':
     parser.add_argument(
         '--train_set',
         type=str,
-        default='image_train_300_dummy',
+        default='image_train_1_300',
      help='Directory for storing data')
 
-    parser.add_argument('--test_set', type=str, default='image_test_300_dummy',
+    parser.add_argument('--test_set', type=str, default='image_test_1_300',
                         help='Directory for storing data')
 
     parser.add_argument('--learning_rate', type=float, default=0.01,
                         help='Initial learning rate')
 
-    parser.add_argument('--epochs', type=int, default=10,
+    parser.add_argument('--epochs', type=int, default=100,
                         help='Number of steps to run trainer.')
 
     parser.add_argument('--input_dim', type=int, default=300,
                         help='Subsampling rate.')
 
-    parser.add_argument('--batch_size', type=int, default=1,
+    parser.add_argument('--batch_size', type=int, default=20,
                         help='Number of steps to run trainer.')
 
     parser.add_argument('--pos_weight', type=int, default=2,

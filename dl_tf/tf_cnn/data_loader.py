@@ -96,7 +96,7 @@ class SeizureDataset:
 
     def pick_random_observation(self, data_dir_name):
         all_data = self.get_file_names_and_classes(data_dir_name)
-        #print(all_data, data_dir_name)
+        print(all_data, data_dir_name)
         inter_count, preic_count = self.count_class_occurrences(all_data)
         print('Interictal/0 samples:', inter_count)
         print('Preictal/1 samples:', preic_count)
@@ -220,7 +220,6 @@ class SeizureDataset:
         print('filename', labels)
         print('label', y_train)
         assert(len(X_train) == len(y_train))
-
         '''
         pdb.set_trace()
         X_train_np = X_train[0].flatten()
@@ -232,7 +231,6 @@ class SeizureDataset:
         return X_train, y_train
 
     def load_test_data(self, test_set_name):
-
         base_dir_test = self.path_to_all_datasets + '/' + test_set_name
         print("Data set directory==>", base_dir_test)
         all_data = self.get_data_dir(test_set_name)
