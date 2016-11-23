@@ -10,39 +10,43 @@ class SeizureClassifier:
 
     def __init__(self,
                  FLAGS,
-                 input_dim=300,
-                 output_dim=1
+                 height = 300,
+                 width = 300,
+                 depth = 16,
+                 output_dim = 1
                  ):
         """ Initialize the network variables
         Args:
-            input_dim: Number of channels in the data i.e. column data
-            output_classes: Number of outcomes, 0 or 1
+            width : Number of time steps (or frequencies), i.e. column data
+            height: Number of rows
+            depth : Number of channels
+            output_dim: Number of outcomes, 0 or 1
             hidden1_units: Size of the first hidden layer
         """
-        self.input_dim = input_dim
-        self.input_timestep = FLAGS.input_dim
+        self.height = height
+        self.width = width
+        self.depth = depth
         self.output_dim = output_dim
         self.batch_size = FLAGS.batch_size
         self.pos_weight = FLAGS.pos_weight
 
         self.num_threads = 5
-        # We have square images so input_dim and timestep
-        # are equivalent
-        self.x_pl = tf.placeholder(
-            tf.float32, [None, self.input_timestep, self.input_dim],
-            name='x-input')
+
+        # place holder definitions
+
+        self.x_pl = tf.placeholder(tf.float32,
+                                   [None,
+                                    self.height,
+                                    self.width,
+                                    self.depth],
+                                    name='x-input')
         self.y_pl = tf.placeholder(tf.float32,
                                    [None, self.output_dim],
                                    name='y-input')
 
-        self.x_pl = tf.placeholder(
-            tf.float32,
-            shape=[
-                None,
-                self.input_dim , self.input_timestep, 16])
-        self.y_pl = tf.placeholder(tf.float32, shape=[None, self.output_dim])
         self.keep_prob = tf.placeholder(tf.float32)
 
+        # TF session
         self.sess = tf.Session(config=tf.ConfigProto(
             intra_op_parallelism_threads=self.num_threads))
 
@@ -93,10 +97,10 @@ class SeizureClassifier:
 
     def _cnn_network(self):
         x_image = tf.reshape(self.x_pl, [-1,
-                                         self.input_dim,
-                                         self.input_timestep,
-                                         16])
-        self.W_conv1 = self._weight_variable([5, 5, 16, 32])
+                                         self.height,
+                                         self.width,
+                                         self.depth])
+        self.W_conv1 = self._weight_variable([5, 5, self.depth, 32])
         self.b_conv1 = self._bias_variable([32])
         self.h_conv1 = tf.nn.sigmoid(self.conv2d(x_image, self.W_conv1) + self.b_conv1)
         self.h_pool1 = self.max_pool_2x2(self.h_conv1)
@@ -137,20 +141,9 @@ class SeizureClassifier:
             X_val,
             y_val,
             FLAGS):
-        # Converting the lists to appropriate tensors
-        y_val = np.reshape(y_val ,(len(y_val),1))
-        X_val = np.reshape(X_val ,(len(X_val),
-                                    self.input_dim,
-                                    self.input_timestep,
-                                    16))
 
         # Add the op to optimize
         self.setup_loss_and_trainOp(FLAGS.learning_rate)
-        # Put there somewhere
-        # self.sigmoid_out = tf.nn.sigmoid(self.y_conv)
-        output = tf.round(self.sigmoid_out)
-        correct_prediction = tf.equal(self.y_pl, output)
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
         # Add the variable initializer op.
         init = tf.initialize_all_variables()
@@ -167,10 +160,9 @@ class SeizureClassifier:
                               feed_dict={self.x_pl: batch_xs,
                                          self.y_pl: batch_ys,
                                          self.keep_prob: 0.5})
-            test_accuracy = self.sess.run(accuracy,
-                                          feed_dict={self.x_pl: X_val,
-                                                     self.y_pl: y_val,
-                                                     self.keep_prob: 1.0})
+
+            test_accuracy = self._get_accuracy(X_val, y_val)
+
             if epoch == 0:
                 best_accuracy = test_accuracy
                 self.saver.save(self.sess,
@@ -188,6 +180,23 @@ class SeizureClassifier:
 
         print("best accuracy %g" % (best_accuracy))
 
+    def _get_accuracy(self,X_val, y_val):
+        output = tf.round(self.sigmoid_out)
+        correct_prediction = tf.equal(self.y_pl, output)
+        # accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        test_accuracy = 0
+        for i in xrange(len(y_val)):
+            X_val_in = np.reshape(X_val[i],(1,
+                                            self.height,
+                                            self.width,
+                                            self.depth))
+            y_val_in = np.reshape(y_val[i],(1,1))
+            test_accuracy += self.sess.run(correct_prediction,
+                                           feed_dict={self.x_pl: X_val_in,
+                                                      self.y_pl: y_val_in,
+                                                      self.keep_prob: 1.0})
+        return (1.0 * test_accuracy) / len(y_val)
+
     def predict(self, ds, FLAGS):
 
         # Load the data and run model on test data
@@ -200,19 +209,23 @@ class SeizureClassifier:
              (FLAGS.model_dir + "model.ckpt"))
         print('Restored model :', FLAGS.model_dir + "model.ckpt")
 
-        X_test = np.reshape(X_test,(len(X_test),
-                                    self.input_dim,
-                                    self.input_dim,
-                                    16))
-        dic = {self.x_pl: X_test, self.keep_prob: 1.0}
-        pred = self.sess.run(self.sigmoid_out, feed_dict=dic)
+        predictions = []
+        # pdb.set_trace()
+        for i in xrange(len(X_test)):
+            X_test_input = np.reshape(X_test[i],(1,
+                                                 self.height,
+                                                 self.width,
+                                                 self.depth))
+            dic = {self.x_pl: X_test_input, self.keep_prob: 1.0}
+            pred = self.sess.run(self.sigmoid_out, feed_dict=dic)
+            predictions.append(pred)
 
         frame = pd.DataFrame({'File': ids,
-                              'Class': pred.flatten()
+                              'Class': predictions
                               })
         cols = frame.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         frame = frame[cols]
         frame['Class'] = frame['Class']
-        frame.to_csv(FLAGS.test_set + '_res.csv', index=False)
+        frame.to_csv(str(FLAGS.patient_id) + '_res.csv', index=False)
         print('Saved results in: ', FLAGS.test_set)

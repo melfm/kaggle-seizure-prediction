@@ -80,29 +80,31 @@ def main(_):
 
 if __name__ == '__main__':
 
-    patient_id = 2
+    patient_id = 1
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--patient_id', type=str, default=patient_id,
-                        help='Patient ID, can take1, 2 or 3')
+    parser.add_argument('--patient_id', type=int, default=patient_id,
+                        help='Patient ID, can take 1, 2 or 3')
 
     parser.add_argument('--model_dir', type=str,
                         default='/home/n2mohaje/seizure_models/rings/patient_{0}/'.format(
                             patient_id),
                         help='Directory for storing data')
-    parser.add_argument('--train_set', type=str, default='image_train_{0}_300/rings/'.format(
+    # parser.add_argument('--train_set', type=str, default='image_train_{0}_300/rings/'.format(
+    parser.add_argument('--train_set', type=str, default='train_{0}_dummy/'.format(
                             patient_id),
                         help='Directory for storing data')
 
-    parser.add_argument('--test_set', type=str, default='image_test_{0}_300/rings/'.format(
+    # parser.add_argument('--test_set', type=str, default='image_test_{0}_300/rings/'.format(
+    parser.add_argument('--test_set', type=str, default='test_{0}_dummy/'.format(
                             patient_id),
                         help='Directory for storing data')
 
     parser.add_argument('--learning_rate', type=float, default=0.01,
                         help='Initial learning rate')
 
-    parser.add_argument('--epochs', type=int, default=100,
+    parser.add_argument('--epochs', type=int, default=1,
                         help='Number of steps to run trainer.')
 
     parser.add_argument('--input_dim', type=int, default=300,
