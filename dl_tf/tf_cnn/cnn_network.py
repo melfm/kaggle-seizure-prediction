@@ -42,7 +42,7 @@ class SeizureClassifier:
                                     name='x-input')
         self.y_pl = tf.placeholder(tf.float32,
                                    [None, self.output_dim],
-                                   name='y-input')
+                                    name='y-input')
 
         self.keep_prob = tf.placeholder(tf.float32)
 

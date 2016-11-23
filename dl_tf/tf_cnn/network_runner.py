@@ -19,7 +19,7 @@ flags.DEFINE_integer('epochs', 20, 'Number of steps to run trainer.')
 
 flags.DEFINE_integer('batch_size', 50, 'Size of batches of data to train on.')
 flags.DEFINE_integer('pos_weight', 2, 'Weighted cross entropy const.')
- flags.DEFINE_integer('train_ds_ratio', 0.75, 'Weighted cross entropy const.')
+flags.DEFINE_integer('train_ds_ratio', 0.75, 'Weighted cross entropy const.')
 
 
 def train_and_validate():
@@ -86,29 +86,29 @@ if __name__ == '__main__':
                         help='Patient ID, can take 1, 2 or 3')
 
     parser.add_argument('--model_dir', type=str,
-                        default='/home/n2mohaje/seizure_models/rings/patient_{0}/'.format(
+                        default='/home/n2mohaje/seizure_models/resp_ffts/patient_{0}/'.format(
                             patient_id),
                         help='Directory for storing data')
-    # parser.add_argument('--train_set', type=str, default='image_train_{0}_300/rings/'.format(
-    parser.add_argument('--train_set', type=str, default='train_{0}_dummy/'.format(
+    parser.add_argument('--train_set', type=str, default='image_train_{0}_300/resp_ffts/'.format(
+    # parser.add_argument('--train_set', type=str, default='train_{0}_dummy/'.format(
                             patient_id),
                         help='Directory for storing data')
 
-    # parser.add_argument('--test_set', type=str, default='image_test_{0}_300/rings/'.format(
-    parser.add_argument('--test_set', type=str, default='test_{0}_dummy/'.format(
+    parser.add_argument('--test_set', type=str, default='image_test_{0}_300/resp_ffts/'.format(
+    # parser.add_argument('--test_set', type=str, default='test_{0}_dummy/'.format(
                             patient_id),
                         help='Directory for storing data')
 
     parser.add_argument('--learning_rate', type=float, default=0.01,
                         help='Initial learning rate')
 
-    parser.add_argument('--epochs', type=int, default=1,
+    parser.add_argument('--epochs', type=int, default=100,
                         help='Number of steps to run trainer.')
 
-    parser.add_argument('--batch_size', type=int, default=20,
+    parser.add_argument('--batch_size', type=int, default=30,
                         help='Number of steps to run trainer.')
 
-    parser.add_argument('--pos_weight', type=float, default=5.,
+    parser.add_argument('--pos_weight', type=float, default=2.,
                         help='Weighted cross entropy const.')
 
     parser.add_argument('--train_ds_ratio', type=float, default=0.75,

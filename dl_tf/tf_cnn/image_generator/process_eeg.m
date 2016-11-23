@@ -77,10 +77,17 @@ for i = 1:length(subjectNames)
             fileName = strrep(fileNames(k).name,'.mat','');
             filePath = fullfile(dataDir, subjectName, fileNames(k).name);
             f = load(filePath);
-            disp(filePath);
+%             disp(filePath);
             
-            eeg_image = trans2image(f,800);
-            save(['../../../data_dir/Kaggle_data/data/image_test_300/' fileName], 'eeg_image');
+            eeg_image = trans2image(f, ...
+                options.ts_sampling, ...
+                options.fft_sampling, ...
+                options.transform_type);
+            if eeg_image == 0
+                disp(['All zeros detected: ' filePath]);
+            else
+                save(['../../../data_dir/Kaggle_data/data/image_train_2_300/resp_ffts/' fileName], 'eeg_image');
+            end
 
             % Calculate features
             %feat = calculate_features(f);
