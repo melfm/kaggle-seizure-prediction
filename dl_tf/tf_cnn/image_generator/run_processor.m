@@ -3,7 +3,7 @@ close all; clear;  clc;
 
 % In total there are three patients
 %subjectNames = {'train_1','train_2','train_3','test_1','test_2','test_3'};
-subjectNames = {'train_3'};
+subjectNames = {'train_1'};
 segmentTypes = {'0','1'}; % Preictal (1) or interictal (0)
 
 
@@ -15,9 +15,9 @@ addpath('../../../data_dir/Kaggle_data/data/');
 opt.dataDir = '../../../data_dir/Kaggle_data/data/'; 
 % output directory
 opt.featureDir =  '/' ;
-opt.transform_type = 'resp_ffts';
+opt.transform_type = 'rep_fft';
 opt.ts_sampling = 1;
-opt.fft_sampling = 800;
+opt.fft_sampling = 750;
 process_eeg(subjectNames(1:end),segmentTypes,opt);
 
 

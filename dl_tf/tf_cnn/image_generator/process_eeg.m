@@ -86,8 +86,9 @@ for i = 1:length(subjectNames)
             if eeg_image == 0
                 disp(['All zeros detected: ' filePath]);
             else
-                save(['../../../data_dir/Kaggle_data/data/image_train_3_300/resp_ffts/' fileName], 'eeg_image');
+                save(['../../../data_dir/Kaggle_data/data/image_train_1_320/rep_fft/' fileName], 'eeg_image');
             end
+%             keyboard;
 
             % Calculate features
             %feat = calculate_features(f);

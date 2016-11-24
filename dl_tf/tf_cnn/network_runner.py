@@ -1,7 +1,8 @@
 #!/usr/
 import argparse
 import tensorflow as tf
-import sys
+import numpy as np
+# import sys
 from cnn_network import SeizureClassifier
 from data_loader import SeizureDataset
 
@@ -28,11 +29,11 @@ def train_and_validate():
     width = 300
     depth = 16
     output_dim = 1
-    patch_size_1 = 3
+    patch_size_1 = 5
     patch_size_2 = 5
-    feature_size_1 = 64
-    feature_size_2 = 128
-    fc_size = 2048
+    feature_size_1 = 32
+    feature_size_2 = 64
+    fc_size = 1024
 
     print('Seizure Detection Learning')
     print('---------------------------------------------------------------')
@@ -63,7 +64,10 @@ def train_and_validate():
         # except:
         #     print("Make sure dataset size is divisble by batch_size!")
         #     sys.exit(1)
-
+        y_1s_train_cnt = np.sum(y_train_set)
+        y_0s_train_cnt = train_set_size - y_1s_train_cnt
+        FLAGS.pos_weight = (1. * y_0s_train_cnt) / y_1s_train_cnt
+        print('Positive weight = ', FLAGS.pos_weight)
         with tf.Graph().as_default():
             # create and train the network
             cnn_net = SeizureClassifier(FLAGS,
@@ -107,7 +111,7 @@ def main(_):
 
 if __name__ == '__main__':
 
-    patient_id = 1
+    patient_id =2
 
     parser = argparse.ArgumentParser()
 
@@ -137,12 +141,13 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=50,
                         help='Number of steps to run trainer.')
 
-    parser.add_argument('--pos_weight', type=float, default=2.,
+    parser.add_argument('--pos_weight', type=float, default=10.,
                         help='Weighted cross entropy const.')
 
     parser.add_argument('--train_ds_ratio', type=float, default=0.75,
                         help='Weighted cross entropy const.')
-    parser.add_argument('--save', type=bool, default=False,
+
+    parser.add_argument('--save', type=bool, default=True,
                         help='Set to True to save the best model.')
     FLAGS = parser.parse_args()
     tf.app.run()

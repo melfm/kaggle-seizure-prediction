@@ -30,9 +30,22 @@ switch transform_type
                 for j = 1:len
                     Z(i,j,n) = exp(-abs(ydft(i))/(1 + abs(ydft(j))));
                 end
-            end
+            end            
         end
-    case '2DFFT'
+%         for i = 1:16
+%             subplot(4,4,i);
+%             imshow(Z(:,:,i));
+%         end
+%         keyboard;
+    case 'rep_fft'
+        y = fft(eegData);
+        F = y(1:fft_fs:end,:);
+        S = fftshift(F);
+        S = kron(S, ones(1,length(F) / nc));
+        A = abs(S);
+        Z = zeros(length(A),length(A),2);
+        Z(:,:,1) = A / max(A(:));
+        Z(:,:,2) = Z(:,:,1)';
 end
 
 end

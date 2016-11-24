@@ -200,12 +200,12 @@ class SeizureClassifier:
                 best_accuracy = test_accuracy
                 if FLAGS.save:
                     self.saver.save(self.sess, (FLAGS.model_dir +  "model.ckpt"))
-                print('Saved model in :', FLAGS.model_dir)
-                pred = self.sess.run(self.sigmoid_out,
-                                     feed_dict={
-                                        self.x_pl: X_val,
-                                        self.keep_prob: 1.0})
-                print('ROC curve: ', roc_auc_score(y_val, pred))
+                    print('Saved model in :', FLAGS.model_dir)
+                # pred = self.sess.run(self.sigmoid_out,
+                #                      feed_dict={
+                #                         self.x_pl: X_val,
+                #                         self.keep_prob: 1.0})
+                # print('ROC curve: ', roc_auc_score(y_val, pred))
             print("step %d, test accuracy %g" % (epoch, test_accuracy))
 
         print("best accuracy %g" % (best_accuracy))
