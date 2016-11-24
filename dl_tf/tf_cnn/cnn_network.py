@@ -248,14 +248,13 @@ class SeizureClassifier:
                                                  self.depth))
             dic = {self.x_pl: X_test_input, self.keep_prob: 1.0}
             pred = self.sess.run(self.sigmoid_out, feed_dict=dic)
-            predictions.append(pred)
-
+            predictions.append(pred.flatten())
         frame = pd.DataFrame({'File': ids,
                               'Class': predictions
                               })
         cols = frame.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         frame = frame[cols]
-        frame['Class'] = frame['Class']
+        frame['Class'] = frame['Class'].astype(float)
         frame.to_csv(str(FLAGS.patient_id) + '_res.csv', index=False)
         print('Saved results in: ', FLAGS.test_set)
