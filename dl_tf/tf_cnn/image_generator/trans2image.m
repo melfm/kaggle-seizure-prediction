@@ -40,12 +40,14 @@ switch transform_type
     case 'rep_fft'
         y = fft(eegData);
         F = y(1:fft_fs:end,:);
-        S = fftshift(F);
-        S = kron(S, ones(1,length(F) / nc));
-        A = abs(S);
-        Z = zeros(length(A),length(A),2);
-        Z(:,:,1) = A / max(A(:));
-        Z(:,:,2) = Z(:,:,1)';
+%         S = fftshift(F);
+%         S = kron(S, ones(1,length(F) / nc));
+        A = abs(F);
+%         Z = zeros(length(A),length(A),2);
+        midpoint = floor(length(A) / 2);
+        Z(:,:) = A(1:midpoint,:) / max(A(:));
+%         Z(:,:,2) = Z(:,:,1)';
+%         keyboard;
 end
 
 end

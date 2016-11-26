@@ -151,6 +151,7 @@ class SeizureDataset:
                 continue
 
             eeg_image = mat_data['eeg_image']
+            # eeg_image = eeg_image[:][200:800]
 
             # make sure we grab the right labels
             if train_data:

@@ -158,7 +158,8 @@ class Classifier_Network:
         # Add a scalar summary for the snapshot loss.
         tf.scalar_summary(self._loss.op.name, self._loss)
         # Create the gradient descent optimizer with the given learning rate.
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+        # optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+        optimizer = tf.train.AdamOptimizer(learning_rate)
         # Create a variable to track the global step.
         global_step = tf.Variable(0, name='global_step', trainable=False)
         # Use the optimizer to apply the gradients that minimize the loss
@@ -172,7 +173,8 @@ class Classifier_Network:
         # It returns a bool tensor with shape [batch_size] that is true for
         # the examples where the label is in the top k (here k=1)
         # of all logits for that example.
-        self._correct = tf.equal(self._logits, self._labels)
+        rounded_output = tf.round(self._outputs)
+        self._correct = tf.equal(rounded_output, self._labels)
         # Return the number of true entries.
         self._test_eval = tf.reduce_sum(tf.cast(self._correct, tf.int32))
 
@@ -217,6 +219,18 @@ class Classifier_Network:
               '\t Precision  %', precision,'%'
         return precision
 
+    def producePredictions(self, dataset):
+        predictions = []
+        for i in xrange(dataset.num_examples):
+            predict = self._sess.run(self._outputs,
+                                     feed_dict =
+                                     {self._inputs_pl: np.reshape(
+                                         dataset.images[i],(1,-1))})
+            predictions.append(predict)
+        return predictions
+
+
+
     def train(self, dataset, FLAGS):
         # Add the op to optimize
         self._setupTrainingOp(FLAGS.learning_rate)
@@ -232,30 +246,32 @@ class Classifier_Network:
         # epoche loops
         for epoch in xrange(FLAGS.epochs):
             start_time = time.time()
+            # pdb.set_trace()
             for step in xrange(num_itr):
                 self._fillFeedDict(dataset.train)
                 _, cost = self._sess.run([self._train_op, self._loss],
                                          feed_dict=self._feed_dict)
             duration = time.time() - start_time
-            print('Epoch %d took %.3f sec, cost: %.3f' % (step,duration,cost))
+            print('Epoch %d took %.3f sec, cost: %.3f' % (epoch,duration,cost))
             # Evaluate against the training set.
-            print('\tTraining Data Eval:'),
-            stdout.flush()
-            self._eval(dataset.train)
+            # print('\tTraining Data Eval:'),
+            # stdout.flush()
+            # self._eval(dataset.train)
             # Evaluate against the validation set.
-            print('\tValidation Data Eval:'),
+            # print '\tValidation Data Eval:',
             val_accuracy = self._eval(dataset.validation)
-            # Evaluate against the test set.
-            # print('\tTest Data Eval:'),
-            # self._eval(dataset.test)
             if epoch == 0:
                 self._saver.save(self._sess,
-                                 self._FLAGS.model_dir + 'model.cpkd')
+                                 self._FLAGS.model_dir)
                 best_accuracy = val_accuracy
             if val_accuracy > best_accuracy:
                 best_accuracy = val_accuracy
                 self._saver.save(self._sess,
-                                 self._FLAGS.model_dir + 'model.cpkd')
+                                 self._FLAGS.model_dir)
+            print '\tBest so far: ', best_accuracy
+            # Evaluate against the test set.
+            # print('\tTest Data Eval:'),
+            # self._eval(dataset.test)
 
     def fullEval(self, dataset):
         """Runs the full evaluation against the entire dataset.
@@ -293,6 +309,9 @@ class Classifier_Network:
                      wrong_ind=wid.copy(),
                      cost=cst.copy())
         return adict
+
+    def load(self):
+        self._saver.restore(self._sess,self._FLAGS.model_dir )
 
 if __name__ == '__main__':
 
