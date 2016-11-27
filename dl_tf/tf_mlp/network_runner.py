@@ -63,7 +63,7 @@ class MyDataset:
                                 dtype=dtypes.float32,
                                 reshape=False)
 
-def train_and_validate():
+def train_and_validate(ds, instance):
 
     height =1000
     width = 16
@@ -79,14 +79,9 @@ def train_and_validate():
 
     do_train = True
 
-    ds_seizure = SeizureDataset(FLAGS)
 
-    X_test, y_test = ds_seizure.load_test_data(FLAGS.test_set)
-    X_train, y_train = ds_seizure.load_train_data(FLAGS.train_set)
-    ds = MyDataset(X_train,y_train,X_test,y_test)
     if do_train:
-
-        print('Data sample size = ', X_train[0].shape)
+        print('Data sample size = ', ds.train.num_examples + ds.train.num_examples)
         print('Trainig samples count = ', ds.train.num_examples)
         print('Validation samples count = ', ds.validation.num_examples)
         print('------------------------------------')
@@ -137,28 +132,51 @@ def train_and_validate():
 
         predictions = mlp_net.producePredictions(ds.test)
         # pdb.set_trace()
-        frame = pd.DataFrame({'File': y_test,
+        frame = pd.DataFrame({'File': ds.test.labels.tolist(),
                               'Class': predictions
                               })
         cols = frame.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         frame = frame[cols]
         frame['Class'] = frame['Class'].astype(float)
-        frame.to_csv(str(FLAGS.patient_id) + '_res.csv', index=False)
+        frame.to_csv(str(FLAGS.patient_id) + '_' + str(instance) + '_res.csv', index=False)
         print('Saved results in: ', FLAGS.test_set)
-        print(predictions)
+        return predictions
 
 def main(_):
-    for i in range(10):
-        FLAGS.model_dir='/home/n2mohaje/seizure_models/single_side_fft/patient_{0}/model_{1}.cpkd'.format(
-            FLAGS.patient_id,i)
-        train_and_validate()
+    instances_count = 2
+    for patient in xrange(3):
+        patient_id = 1 + patient
+        FLAGS.patient_id = patient_id
+        FLAGS.model_dir = '/home/n2mohaje/seizure_models/single_side_fft/patient_{0}/'.format(
+                                patient_id)
+        FLAGS.train_set = 'image_train_{0}_1000/single_side_fft/'.format(
+                                patient_id)
+        FLAGS.test_set = 'image_test_{0}_1000/single_side_fft/'.format(
+                                patient_id)
+        predictions = 0
+        for instances in xrange(instances_count):
+            ds_seizure = SeizureDataset(FLAGS)
+            X_test, y_ids = ds_seizure.load_test_data(FLAGS.test_set)
+            X_train, y_train = ds_seizure.load_train_data(FLAGS.train_set)
+            ds = MyDataset(X_train,y_train,X_test,y_ids)
+            FLAGS.model_dir='/home/n2mohaje/seizure_models/single_side_fft/patient_{0}/model_{1}.cpkd'.format(
+                FLAGS.patient_id,instances)
+            predictions += np.array(train_and_validate(ds,instances))
 
+        frame = pd.DataFrame({'File': ds.test.labels.tolist(),
+                              'Class': list(predictions / instances_count)
+                              })
+        cols = frame.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        frame = frame[cols]
+        frame['Class'] = frame['Class'].astype(float)
+        frame.to_csv(str(FLAGS.patient_id) + '_average_res.csv', index=False)
+        print('Saved results in: ', FLAGS.test_set)
 
 if __name__ == '__main__':
 
-    for i in xrange(3):
-        patient_id = 1 + i
+        patient_id = 1
 
         parser = argparse.ArgumentParser()
 
@@ -182,10 +200,10 @@ if __name__ == '__main__':
         parser.add_argument('--learning_rate', type=float, default=0.0001,
                             help='Initial learning rate')
 
-        parser.add_argument('--epochs', type=int, default=5000,
+        parser.add_argument('--epochs', type=int, default=2,
                             help='Number of steps to run trainer.')
 
-        parser.add_argument('--batch_size', type=int, default=50,
+        parser.add_argument('--batch_size', type=int, default=20,
                             help='Number of steps to run trainer.')
 
         parser.add_argument('--pos_weight', type=float, default=10.,

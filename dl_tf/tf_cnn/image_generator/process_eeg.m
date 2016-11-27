@@ -86,7 +86,7 @@ for i = 1:length(subjectNames)
             if eeg_image == 0
                 disp(['All zeros detected: ' filePath]);
             else
-                save(['../../../data_dir/Kaggle_data/data/image_test_3_1000/single_side_fft/' fileName], 'eeg_image');
+                save(['../../../data_dir/Kaggle_data/data/image_train_2_1000/single_side_fft/' fileName], 'eeg_image');
             end
             k
 %             keyboard;

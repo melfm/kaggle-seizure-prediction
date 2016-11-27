@@ -94,7 +94,7 @@ class SeizureDataset:
 
     def pick_random_observation(self, data_dir_name):
         all_data = self.get_file_names_and_classes(data_dir_name)
-        print(all_data, data_dir_name)
+        # print(all_data, data_dir_name)
         inter_count, preic_count = self.count_class_occurrences(all_data)
         print('Interictal/0 samples:', inter_count)
         print('Preictal/1 samples:', preic_count)
@@ -151,6 +151,7 @@ class SeizureDataset:
                 continue
 
             eeg_image = mat_data['eeg_image']
+            # pdb.set_trace()
             # eeg_image = eeg_image[:][200:800]
 
             # make sure we grab the right labels
@@ -200,8 +201,8 @@ class SeizureDataset:
         y_train_or = shuffled_dataset['class']
 
         assert(np.array_equal(y_train, y_train_or))
-        print('filename', labels)
-        print('label', y_train)
+        # print('filename', labels)
+        # print('label', y_train)
         assert(len(X_train) == len(y_train))
 
         return X_train, y_train

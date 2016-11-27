@@ -204,12 +204,13 @@ class Classifier_Network:
             data_set: The set of images and labels to evaluate, from
             input_data.read_data_sets().
         """
-        # And run one epoch of eval.
         true_count = 0  # Counts the number of correct predictions.
-        steps_per_epoch = dataset.num_examples // self._batch_size
 
-        for step in xrange(steps_per_epoch):
-            self._fillFeedDict(dataset)
+        for i in xrange(dataset.num_examples):
+            self._feed_dict = {
+                self._inputs_pl: np.reshape(dataset.images[i],(1,-1)),
+                self._labels_pl: dataset.labels[i],
+            }
             true_count += self._sess.run(self._test_eval,
                                         feed_dict=self._feed_dict)
         precision = 100 * true_count / dataset.num_examples
@@ -240,11 +241,12 @@ class Classifier_Network:
         init = tf.initialize_all_variables()
         # Run the Op to initialize the variables
         self._sess.run(init)
-        # calculate number of iteration per an epoche
-        num_itr = int(round(dataset.train.num_examples / self._batch_size) + 1)
+
         # Start the training loop
         # epoche loops
         for epoch in xrange(FLAGS.epochs):
+            # calculate number of iteration per an epoche
+            num_itr = int(round(dataset.train.num_examples / self._batch_size) + 1)
             start_time = time.time()
             # pdb.set_trace()
             for step in xrange(num_itr):
@@ -252,15 +254,10 @@ class Classifier_Network:
                 _, cost = self._sess.run([self._train_op, self._loss],
                                          feed_dict=self._feed_dict)
             duration = time.time() - start_time
-            print('Epoch %d took %.3f sec, cost: %.8f' % (epoch,duration,cost))
-            # Evaluate against the training set.
-            # print('\tTraining Data Eval:'),
-            # stdout.flush()
-            # self._eval(dataset.train)
-            # Evaluate against the validation set.
-            # print '\tValidation Data Eval:',
+            print('Epoch %d took %.3f sec, cost: %f' % (epoch,duration,cost))
+
+            self._fillFeedDict(dataset.validation,True)
             val_accuracy = self._eval(dataset.validation)
-            self._fillFeedDict(dataset.validation)
             val_cost = self._sess.run(self._loss,self._feed_dict)
             if epoch == 0:
                 self._saver.save(self._sess,
@@ -272,10 +269,11 @@ class Classifier_Network:
                 best_accuracy = val_accuracy
                 self._saver.save(self._sess,
                                  self._FLAGS.model_dir)
-            print '\tBest cost so far: ', best_cost, ', best accuracy so far:', best_accuracy
-            # Evaluate against the test set.
-            # print('\tTest Data Eval:'),
-            # self._eval(dataset.test)
+            print '\tBest cost so far: ', best_cost, ', corresponding accuracy:', best_accuracy
+
+            # slight increase in the batch size for the next epoch
+            self._batch_size = max(self._batch_size + 5,dataset.train.num_examples)
+
 
     def fullEval(self, dataset):
         """Runs the full evaluation against the entire dataset.
