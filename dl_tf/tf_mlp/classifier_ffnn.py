@@ -252,7 +252,7 @@ class Classifier_Network:
                 _, cost = self._sess.run([self._train_op, self._loss],
                                          feed_dict=self._feed_dict)
             duration = time.time() - start_time
-            print('Epoch %d took %.3f sec, cost: %.3f' % (epoch,duration,cost))
+            print('Epoch %d took %.3f sec, cost: %.8f' % (epoch,duration,cost))
             # Evaluate against the training set.
             # print('\tTraining Data Eval:'),
             # stdout.flush()
@@ -260,15 +260,19 @@ class Classifier_Network:
             # Evaluate against the validation set.
             # print '\tValidation Data Eval:',
             val_accuracy = self._eval(dataset.validation)
+            self._fillFeedDict(dataset.validation)
+            val_cost = self._sess.run(self._loss,self._feed_dict)
             if epoch == 0:
                 self._saver.save(self._sess,
                                  self._FLAGS.model_dir)
                 best_accuracy = val_accuracy
-            if val_accuracy > best_accuracy:
+                best_cost = val_cost
+            if val_cost < best_cost:
+                best_cost = val_cost
                 best_accuracy = val_accuracy
                 self._saver.save(self._sess,
                                  self._FLAGS.model_dir)
-            print '\tBest so far: ', best_accuracy
+            print '\tBest cost so far: ', best_cost, ', best accuracy so far:', best_accuracy
             # Evaluate against the test set.
             # print('\tTest Data Eval:'),
             # self._eval(dataset.test)

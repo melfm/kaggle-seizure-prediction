@@ -136,7 +136,7 @@ def train_and_validate():
         mlp_net.load()
 
         predictions = mlp_net.producePredictions(ds.test)
-        pdb.set_trace()
+        # pdb.set_trace()
         frame = pd.DataFrame({'File': y_test,
                               'Class': predictions
                               })
