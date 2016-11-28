@@ -195,7 +195,7 @@ class Classifier_Network:
             inputs_feed, labels_feed = dataset.next_batch(self._batch_size)
         self._feed_dict = {
             self._inputs_pl: inputs_feed,
-            self._labels_pl: labels_feed,
+            self._labels_pl: labels_feed
         }
 
     def _eval(self, dataset):
@@ -207,12 +207,12 @@ class Classifier_Network:
         true_count = 0  # Counts the number of correct predictions.
 
         for i in xrange(dataset.num_examples):
-            self._feed_dict = {
+            afeed_dict = {
                 self._inputs_pl: np.reshape(dataset.images[i],(1,-1)),
-                self._labels_pl: dataset.labels[i],
+                self._labels_pl: dataset.labels[i]
             }
             true_count += self._sess.run(self._test_eval,
-                                        feed_dict=self._feed_dict)
+                                        feed_dict=afeed_dict)
         precision = 100 * true_count / dataset.num_examples
         # pdb.set_trace()
         print '\tNum examples: ', dataset.num_examples,\
@@ -244,6 +244,7 @@ class Classifier_Network:
 
         # Start the training loop
         # epoche loops
+        local_min_cnt = 0
         for epoch in xrange(FLAGS.epochs):
             # calculate number of iteration per an epoche
             num_itr = int(round(dataset.train.num_examples / self._batch_size) + 1)
@@ -265,14 +266,25 @@ class Classifier_Network:
                 best_accuracy = val_accuracy
                 best_cost = val_cost
             if val_cost < best_cost:
+                local_min_cnt = 0
                 best_cost = val_cost
                 best_accuracy = val_accuracy
                 self._saver.save(self._sess,
                                  self._FLAGS.model_dir)
-            print '\tBest cost so far: ', best_cost, ', corresponding accuracy:', best_accuracy
+            else:
+                local_min_cnt += 1
 
+            print '\tBest cost so far: ', best_cost,
+            print ', corresponding accuracy: ', best_accuracy,
+            print ', local min iterations: ', local_min_cnt
+
+            if local_min_cnt == FLAGS.max_localmin_iters:
+                return -1
+            if best_cost == 0:
+                pdb.set_trace()
             # slight increase in the batch size for the next epoch
-            self._batch_size = max(self._batch_size + 5,dataset.train.num_examples)
+            # self._batch_size = min(self._batch_size + 5,dataset.train.num_examples - 1)
+        return 0
 
 
     def fullEval(self, dataset):

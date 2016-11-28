@@ -3,6 +3,7 @@ import argparse
 import tensorflow as tf
 import numpy as np
 import pandas as pd
+import itertools
 import pdb
 # import sys
 # from cnn_network import SeizureClassifier
@@ -113,7 +114,9 @@ def train_and_validate(ds, instance):
 
             mlp_net.setupLoss()
 
-            mlp_net.train(ds, FLAGS)
+            if mlp_net.train(ds, FLAGS) == -1 :
+                print ' **************************** LOCAL MINIMUM HIT!'\
+                      ' ****************************'
 
     # Start a new graph
     with tf.Graph().as_default():
@@ -144,11 +147,11 @@ def train_and_validate(ds, instance):
         return predictions
 
 def main(_):
-    instances_count = 2
+    instances_count = 10
     for patient in xrange(3):
         patient_id = 1 + patient
         FLAGS.patient_id = patient_id
-        FLAGS.model_dir = '/home/n2mohaje/seizure_models/single_side_fft/patient_{0}/'.format(
+        FLAGS.model_dir = '/home/melissafm/seizure_models/single_side_fft/patient_{0}/'.format(
                                 patient_id)
         FLAGS.train_set = 'image_train_{0}_1000/single_side_fft/'.format(
                                 patient_id)
@@ -160,7 +163,7 @@ def main(_):
             X_test, y_ids = ds_seizure.load_test_data(FLAGS.test_set)
             X_train, y_train = ds_seizure.load_train_data(FLAGS.train_set)
             ds = MyDataset(X_train,y_train,X_test,y_ids)
-            FLAGS.model_dir='/home/n2mohaje/seizure_models/single_side_fft/patient_{0}/model_{1}.cpkd'.format(
+            FLAGS.model_dir='/home/melissafm/seizure_models/single_side_fft/patient_{0}/model_{1}.cpkd'.format(
                 FLAGS.patient_id,instances)
             predictions += np.array(train_and_validate(ds,instances))
 
@@ -171,6 +174,9 @@ def main(_):
         cols = cols[-1:] + cols[:-1]
         frame = frame[cols]
         frame['Class'] = frame['Class'].astype(float)
+        list2d = frame['File'].values.tolist()
+        merged = list(itertools.chain.from_iterable(list2d))
+        frame['File'] = merged
         frame.to_csv(str(FLAGS.patient_id) + '_average_res.csv', index=False)
         print('Saved results in: ', FLAGS.test_set)
 
@@ -184,7 +190,7 @@ if __name__ == '__main__':
                             help='Patient ID, can take 1, 2 or 3')
 
         parser.add_argument('--model_dir', type=str,
-                            default='/home/n2mohaje/seizure_models/single_side_fft/patient_{0}/'.format(
+                            default='/home/melissafm/seizure_models/single_side_fft/patient_{0}/'.format(
                                 patient_id),
                             help='Directory for storing data')
         parser.add_argument('--train_set', type=str, default='image_train_{0}_1000/single_side_fft/'.format(
@@ -197,13 +203,13 @@ if __name__ == '__main__':
                                 patient_id),
                             help='Directory for storing data')
 
-        parser.add_argument('--learning_rate', type=float, default=0.0001,
+        parser.add_argument('--learning_rate', type=float, default=0.001,
                             help='Initial learning rate')
 
-        parser.add_argument('--epochs', type=int, default=2,
+        parser.add_argument('--epochs', type=int, default=4000,
                             help='Number of steps to run trainer.')
 
-        parser.add_argument('--batch_size', type=int, default=20,
+        parser.add_argument('--batch_size', type=int, default=50,
                             help='Number of steps to run trainer.')
 
         parser.add_argument('--pos_weight', type=float, default=10.,
@@ -214,6 +220,9 @@ if __name__ == '__main__':
 
         parser.add_argument('--save', type=bool, default=True,
                             help='Set to True to save the best model.')
+
+        parser.add_argument('--max_localmin_iters', type=int, default=100,
+                            help='Maximum number of iterations allowed to be spent on a local minimum.')
         FLAGS = parser.parse_args()
         tf.app.run()
 
