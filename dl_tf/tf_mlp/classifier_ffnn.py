@@ -1,13 +1,8 @@
 #!/usr/bin/env python
-"""Builds the booster network for MNIST weak classifiers.
-The MNIST booster is a network which receives the output of two
-weak classifiers and aims at performing a better classification
-on the MNIST dataset by learning which weak network performs
-better in what situation. The MNIST booster network input size
-is therefore 20 (2 weak classifiers outputs, ecah has 10 output)
-and its output size is 10 (number of classes). The number and sizes
-of hidden layers (as well as their activation functions) are user-
-defined.
+"""Builds a simple neural network experimenting with the following techniques :
+    - Regularization
+    - weighted cross entropy cost function to make up for imbalanced data
+    - Cost pertubation
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -18,9 +13,6 @@ import tensorflow as tf
 import numpy as np
 import time
 import pdb
-from sys import stdout
-import matplotlib.pyplot as plt
-
 
 class Classifier_Network:
 
@@ -34,7 +26,7 @@ class Classifier_Network:
                  hidden_act = tf.nn.relu,
                  output_act = tf.nn.softmax,
                  pos_weight = 1.):
-        """Initializes a MNIST booster
+        """Initialize the network
         Args:
             hidden_layer_cnt: number of hidden layers,
             hidden_sizes: list of number of neurons in each hidden layer,
@@ -190,10 +182,6 @@ class Classifier_Network:
                     self._labels,
                     self._pos_weight,
                     name = 'wentropy')
-        # self._cross_entropy = \
-        #         tf.nn.sparse_softmax_cross_entropy_with_logits(self._logits,
-        #                                                        self._labels,
-        #                                                        name='xentropy')
 
         # Adding l2 regularization
         all_weights = tf.trainable_variables()
