@@ -347,7 +347,7 @@ class Classifier_Network:
                 return -1
             # slight increase in the batch size for the next epoch
             # self._batch_size = min(self._batch_size + 5,dataset.train.num_examples - 1)
-        pdb.set_trace()
+        #pdb.set_trace()
         return 0
 
     def _perturbWeights(self,
@@ -382,7 +382,7 @@ class Classifier_Network:
         predictions = self._sess.run(self._correct,
                                     feed_dict=self._feed_dict)
         correct_class_idx = np.where(predictions)
-        misclassified_idx = np.where(predictions == False)
+        misclassified_idx = np.where(predictions is False)
         return correct_class_idx[0], misclassified_idx[0], loss_values
 
     def calcOutputs(self, dataset):

@@ -1,12 +1,15 @@
-#!/usr/
+#!/usr/bin/env python
+"""Simple neural network architecture for Melbourne iEEG data.
+This should achieve an AUC of ~ 0.7%.
+"""
 import argparse
 import tensorflow as tf
 import numpy as np
 import pandas as pd
 import itertools
+import os
 import pdb
-# import sys
-# from cnn_network import SeizureClassifier
+
 from data_loader import SeizureDataset
 from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
 from tensorflow.python.framework import dtypes
@@ -58,7 +61,7 @@ class MyDataset:
                                   y_val_set,
                                   dtype=dtypes.float32,
                                   reshape=False)
-        if not (x_test == None) and not (y_test == None):
+        if not (x_test is None) and (y_test is not None):
             self.test = DataSet(x_test,
                                 y_test,
                                 dtype=dtypes.float32,
@@ -90,12 +93,6 @@ def train_and_validate(ds, instance):
         print('------------------------------------')
         print('Number of ones in the validation set = ',np.sum(ds.validation.labels))
 
-        # Note : Make sure dataset is divisible by batch_size
-        # try:
-        #     assert(len(X_train) % FLAGS.batch_size == 0)
-        # except:
-        #     print("Make sure dataset size is divisble by batch_size!")
-        #     sys.exit(1)
         y_1s_train_cnt = np.sum(ds.train.labels)
         y_0s_train_cnt = ds.train.num_examples - y_1s_train_cnt
         pos_weight =  (1. * y_0s_train_cnt) / y_1s_train_cnt
@@ -134,7 +131,6 @@ def train_and_validate(ds, instance):
         mlp_net.load()
 
         predictions = mlp_net.producePredictions(ds.test)
-        # pdb.set_trace()
         frame = pd.DataFrame({'File': ds.test.labels.tolist(),
                               'Class': predictions
                               })
@@ -142,17 +138,18 @@ def train_and_validate(ds, instance):
         cols = cols[-1:] + cols[:-1]
         frame = frame[cols]
         frame['Class'] = frame['Class'].astype(float)
-        frame.to_csv(str(FLAGS.patient_id) + '_' + str(instance) + '_res.csv', index=False)
+        frame.to_csv(FLAGS.model_dir + str(FLAGS.patient_id) + '_' + str(instance) + '_res.csv', index=False)
         print('Saved results in: ', FLAGS.test_set)
         return predictions
 
 def main(_):
+    username = os.getlogin()
+    user_dir = '/home/' + username
     instances_count = 10
     # for patient in xrange(3):
     patient_id = 0 #1 + patient
     FLAGS.patient_id = patient_id
-    # FLAGS.model_dir = '/home/melissafm/seizure_models/single_side_fft/patient_{0}/'.format(
-    #                         patient_id)
+
     FLAGS.train_set = 'image_train_all_1000/single_side_fft/'.format(
                             patient_id)
     FLAGS.test_set = 'image_test_all_1000/single_side_fft/'.format(
@@ -163,7 +160,7 @@ def main(_):
         X_test, y_ids = ds_seizure.load_test_data(FLAGS.test_set)
         X_train, y_train = ds_seizure.load_train_data(FLAGS.train_set)
         ds = MyDataset(X_train,y_train,X_test,y_ids)
-        FLAGS.model_dir='/home/n2mohaje/seizure_models/single_side_fft/patient_{0}/model_{1}.cpkd'.format(
+        FLAGS.model_dir= user_dir +'/seizure_models/single_side_fft/patient_{0}/model_{1}.cpkd'.format(
             FLAGS.patient_id,instances)
         predictions += np.array(train_and_validate(ds,instances))
 
@@ -183,6 +180,8 @@ def main(_):
 if __name__ == '__main__':
 
         patient_id = 0
+        username = os.getlogin()
+        user_dir = '/home/' + username
 
         parser = argparse.ArgumentParser()
 
@@ -190,16 +189,16 @@ if __name__ == '__main__':
                             help='Patient ID, can take 1, 2 or 3')
 
         parser.add_argument('--model_dir', type=str,
-                            default='/home/melissafm/seizure_models/single_side_fft/patient_{0}/'.format(
+                            default= user_dir + '/seizure_models/single_side_fft/patient_{0}/'.format(
                                 patient_id),
                             help='Directory for storing data')
-        parser.add_argument('--train_set', type=str, default='image_train_{0}_1000/single_side_fft/'.format(
-        #parser.add_argument('--train_set', type=str, default='train_{0}_dummy/'.format(
+        #parser.add_argument('--train_set', type=str, default='image_train_{0}_1000/single_side_fft/'.format(
+        parser.add_argument('--train_set', type=str, default='train_{0}_dummy/'.format(
                                 patient_id),
                             help='Directory for storing data')
 
-        parser.add_argument('--test_set', type=str, default='image_test_{0}_1000/single_side_fft/'.format(
-        #parser.add_argument('--test_set', type=str, default='test_{0}_dummy/'.format(
+        #parser.add_argument('--test_set', type=str, default='image_test_{0}_1000/single_side_fft/'.format(
+        parser.add_argument('--test_set', type=str, default='test_{0}_dummy/'.format(
                                 patient_id),
                             help='Directory for storing data')
 
