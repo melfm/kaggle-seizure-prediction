@@ -69,7 +69,7 @@ def train_and_validate(ds, instance):
     height =1000
     width = 16
     hidden_layer_cnt = 3
-    hidden_sizes = np.array([4000, 200, 50])
+    hidden_sizes = np.array([8000, 2000, 50])
     batch_size = FLAGS.batch_size
     hidden_act = tf.nn.relu
     output_act = tf.nn.sigmoid
@@ -98,7 +98,7 @@ def train_and_validate(ds, instance):
         #     sys.exit(1)
         y_1s_train_cnt = np.sum(ds.train.labels)
         y_0s_train_cnt = ds.train.num_examples - y_1s_train_cnt
-        pos_weight =  (1.2 * y_0s_train_cnt) / y_1s_train_cnt
+        pos_weight =  (1. * y_0s_train_cnt) / y_1s_train_cnt
         print('Positive weight = ', pos_weight)
         with tf.Graph().as_default():
             # create and train the network
@@ -148,41 +148,41 @@ def train_and_validate(ds, instance):
 
 def main(_):
     instances_count = 10
-    for patient in xrange(3):
-        patient_id = 1 + patient
-        FLAGS.patient_id = patient_id
-        FLAGS.model_dir = '/home/melissafm/seizure_models/single_side_fft/patient_{0}/'.format(
-                                patient_id)
-        FLAGS.train_set = 'image_train_{0}_1000/single_side_fft/'.format(
-                                patient_id)
-        FLAGS.test_set = 'image_test_{0}_1000/single_side_fft/'.format(
-                                patient_id)
-        predictions = 0
-        for instances in xrange(instances_count):
-            ds_seizure = SeizureDataset(FLAGS)
-            X_test, y_ids = ds_seizure.load_test_data(FLAGS.test_set)
-            X_train, y_train = ds_seizure.load_train_data(FLAGS.train_set)
-            ds = MyDataset(X_train,y_train,X_test,y_ids)
-            FLAGS.model_dir='/home/melissafm/seizure_models/single_side_fft/patient_{0}/model_{1}.cpkd'.format(
-                FLAGS.patient_id,instances)
-            predictions += np.array(train_and_validate(ds,instances))
+    # for patient in xrange(3):
+    patient_id = 0 #1 + patient
+    FLAGS.patient_id = patient_id
+    # FLAGS.model_dir = '/home/melissafm/seizure_models/single_side_fft/patient_{0}/'.format(
+    #                         patient_id)
+    FLAGS.train_set = 'image_train_all_1000/single_side_fft/'.format(
+                            patient_id)
+    FLAGS.test_set = 'image_test_all_1000/single_side_fft/'.format(
+                            patient_id)
+    predictions = 0
+    for instances in xrange(instances_count):
+        ds_seizure = SeizureDataset(FLAGS)
+        X_test, y_ids = ds_seizure.load_test_data(FLAGS.test_set)
+        X_train, y_train = ds_seizure.load_train_data(FLAGS.train_set)
+        ds = MyDataset(X_train,y_train,X_test,y_ids)
+        FLAGS.model_dir='/home/n2mohaje/seizure_models/single_side_fft/patient_{0}/model_{1}.cpkd'.format(
+            FLAGS.patient_id,instances)
+        predictions += np.array(train_and_validate(ds,instances))
 
-        frame = pd.DataFrame({'File': ds.test.labels.tolist(),
-                              'Class': list(predictions / instances_count)
-                              })
-        cols = frame.columns.tolist()
-        cols = cols[-1:] + cols[:-1]
-        frame = frame[cols]
-        frame['Class'] = frame['Class'].astype(float)
-        list2d = frame['File'].values.tolist()
-        merged = list(itertools.chain.from_iterable(list2d))
-        frame['File'] = merged
-        frame.to_csv(str(FLAGS.patient_id) + '_average_res.csv', index=False)
-        print('Saved results in: ', FLAGS.test_set)
+    frame = pd.DataFrame({'File': ds.test.labels.tolist(),
+                            'Class': list(predictions / instances_count)
+                            })
+    cols = frame.columns.tolist()
+    cols = cols[-1:] + cols[:-1]
+    frame = frame[cols]
+    frame['Class'] = frame['Class'].astype(float)
+    list2d = frame['File'].values.tolist()
+    merged = list(itertools.chain.from_iterable(list2d))
+    frame['File'] = merged
+    frame.to_csv(str(FLAGS.patient_id) + '_average_res.csv', index=False)
+    print('Saved results in: ', FLAGS.test_set)
 
 if __name__ == '__main__':
 
-        patient_id = 1
+        patient_id = 0
 
         parser = argparse.ArgumentParser()
 
@@ -221,8 +221,11 @@ if __name__ == '__main__':
         parser.add_argument('--save', type=bool, default=True,
                             help='Set to True to save the best model.')
 
-        parser.add_argument('--max_localmin_iters', type=int, default=100,
+        parser.add_argument('--max_localmin_iters', type=int, default=30,
                             help='Maximum number of iterations allowed to be spent on a local minimum.')
+
+        parser.add_argument('--max_perturbs', type=int, default=5,
+                            help='Maximum number of weight perturbations.')
         FLAGS = parser.parse_args()
         tf.app.run()
 

@@ -19,6 +19,7 @@ import numpy as np
 import time
 import pdb
 from sys import stdout
+import matplotlib.pyplot as plt
 
 
 class Classifier_Network:
@@ -72,7 +73,7 @@ class Classifier_Network:
     def _weightVariable(self, shape):
         """Create a weight variable with appropriate initialization."""
         initial = tf.truncated_normal(shape,
-                                      stddev=1.0 / math.sqrt(float(shape[0])),
+                                      stddev=1. / math.sqrt(float(shape[0])),
                                       name='weights')
         return tf.Variable(initial)
 
@@ -106,8 +107,35 @@ class Classifier_Network:
             activations = act(preactivate, name='activation')
             return activations
 
+    def _nnLayerWithScope(self,
+                          input_tensor,
+                          input_dim,
+                          output_dim,
+                          layer_name,
+                          act=tf.nn.relu):
+        """Reusable code for making a simple neural net layer.
+
+        It does a matrix multiply, bias add, and then uses relu to nonlinearize.
+        It also sets up name scoping so that the resultant graph is easy to read,
+        and adds a number of summary ops.
+        """
+        # Adding a name scope ensures logical grouping of the layers in the
+        # graph.
+        with tf.variable_scope(layer_name, reuse = False):
+            # Create variable named "weights".
+            weights = tf.get_variable("weights",
+                                      [input_dim, output_dim],
+                                      initializer=tf.random_uniform_initializer(-0.1,0.1))
+            # Create variable named "biases".
+            biases = tf.get_variable("biases",
+                                     [output_dim],
+                                     initializer=tf.constant_initializer(0.1))
+            with tf.name_scope('ridge_transform'):
+                preactivate = tf.matmul(input_tensor, weights) + biases
+            activations = act(preactivate, name='activation')
+            return activations, preactivate
+
     def _buildNet(self):
-        # Build the booster network.
         # input layer
         hidden = self._nnLayer(self._inputs_pl,
                                 self._in_size,
@@ -131,6 +159,28 @@ class Classifier_Network:
             self._logits  = tf.matmul(hidden, weights) + biases
             self._outputs = self._oact(self._logits)
 
+    def _buildNetWithScope(self):
+        # input layer
+        hidden, _ = self._nnLayerWithScope(self._inputs_pl,
+                                           self._in_size,
+                                           self._hsize[0],
+                                           layer_name = 'input',
+                                           act = self._hact)
+        # making hidden layers
+        for i in range(1, self._lcnt):
+            astr = 'hidden{0}'.format(i)
+            hidden,_ = self._nnLayerWithScope(hidden,
+                                              self._hsize[i - 1],
+                                              self._hsize[i],
+                                              layer_name = astr,
+                                              act = self._hact)
+        # making output layer
+        self._outputs, self._logits = self._nnLayerWithScope(hidden,
+                                                             self._hsize[self._lcnt-1],
+                                                             self._out_size,
+                                                             layer_name = 'output',
+                                                             act = self._oact)
+
     def setupLoss(self):
         """Calculates the loss from the logits and the labels.
         """
@@ -144,7 +194,11 @@ class Classifier_Network:
         #         tf.nn.sparse_softmax_cross_entropy_with_logits(self._logits,
         #                                                        self._labels,
         #                                                        name='xentropy')
-        self._loss = tf.reduce_mean(self._cross_entropy, name='xentropy_mean')
+
+        # Adding l2 regularization
+        all_weights = tf.trainable_variables()
+        lossL2 = tf.add_n([tf.nn.l2_loss(v) for v in all_weights])*0.005
+        self._loss = tf.reduce_mean(self._cross_entropy, name='xentropy_mean') + lossL2
 
     def _setupTrainingOp(self, learning_rate):
         """Sets up the training Ops.
@@ -230,8 +284,6 @@ class Classifier_Network:
             predictions.append(predict)
         return predictions
 
-
-
     def train(self, dataset, FLAGS):
         # Add the op to optimize
         self._setupTrainingOp(FLAGS.learning_rate)
@@ -245,11 +297,14 @@ class Classifier_Network:
         # Start the training loop
         # epoche loops
         local_min_cnt = 0
+        perturb = 0
+        def_magnitude = 0.1
+        magnitude = def_magnitude
+        costs = np.zeros(FLAGS.epochs)
         for epoch in xrange(FLAGS.epochs):
             # calculate number of iteration per an epoche
             num_itr = int(round(dataset.train.num_examples / self._batch_size) + 1)
             start_time = time.time()
-            # pdb.set_trace()
             for step in xrange(num_itr):
                 self._fillFeedDict(dataset.train)
                 _, cost = self._sess.run([self._train_op, self._loss],
@@ -260,13 +315,17 @@ class Classifier_Network:
             self._fillFeedDict(dataset.validation,True)
             val_accuracy = self._eval(dataset.validation)
             val_cost = self._sess.run(self._loss,self._feed_dict)
+            costs[epoch] = val_cost
             if epoch == 0:
                 self._saver.save(self._sess,
                                  self._FLAGS.model_dir)
                 best_accuracy = val_accuracy
                 best_cost = val_cost
+
             if val_cost < best_cost:
                 local_min_cnt = 0
+                perturb = 0
+                magnitude = def_magnitude
                 best_cost = val_cost
                 best_accuracy = val_accuracy
                 self._saver.save(self._sess,
@@ -277,15 +336,37 @@ class Classifier_Network:
             print '\tBest cost so far: ', best_cost,
             print ', corresponding accuracy: ', best_accuracy,
             print ', local min iterations: ', local_min_cnt
-
             if local_min_cnt == FLAGS.max_localmin_iters:
-                return -1
-            if best_cost == 0:
+                local_min_cnt = 0
+                perturb += 1
+                self._perturbWeights(magnitude)
+                print '!!!!!!!!!!!!!!!!!!!!!!! PERTURBED !!!!!!!!!!!!!!!!!!!!!!!'
+                magnitude *= 2
+            if perturb == FLAGS.max_perturbs:
                 pdb.set_trace()
+                return -1
             # slight increase in the batch size for the next epoch
             # self._batch_size = min(self._batch_size + 5,dataset.train.num_examples - 1)
+        pdb.set_trace()
         return 0
 
+    def _perturbWeights(self,
+                        perturb_mech = 'weight_wise',
+                        random_step = 'uniform',
+                        magnitude = 0.1):
+        #get list of all trainable weights (and biases)
+        all_weights = tf.trainable_variables()
+
+        for i in xrange(len(all_weights)):
+            # get the weight values
+            weight = self._sess.run(all_weights[i])
+            # random step
+            if random_step == 'uniform':
+                perturbation = np.random.rand(*weight.shape)
+            # check perturbnation mechanism to apply perturbation
+            if perturb_mech == 'weight_wise':
+                self._sess.run(all_weights[i].assign_add(magnitude * np.multiply(perturbation,
+                                                                                 weight)))
 
     def fullEval(self, dataset):
         """Runs the full evaluation against the entire dataset.
@@ -327,23 +408,3 @@ class Classifier_Network:
     def load(self):
         self._saver.restore(self._sess,self._FLAGS.model_dir )
 
-if __name__ == '__main__':
-
-        flags = tf.app.flags
-        FLAGS = flags.FLAGS
-        flags.DEFINE_string('data_dir', 'data', 'Directory to put the training data.')
-        flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-        flags.DEFINE_integer('num_steps', 2000, 'Number of steps to run trainer.')
-        ds = XDataset('data')
-        with tf.Graph().as_default():
-            # create and train a weack classifier
-            print(' Test a feedforward neural network on clasifying MNIST:')
-            wnet = Classifier_Network(input_size = 28 * 28,
-                                      output_size = 10,
-                                      hidden_layer_cnt = 1,
-                                      hidden_sizes = [100],
-                                      batch_size = 100,
-                                      hidden_act = tf.nn.relu,
-                                      output_act = tf.nn.softmax)
-            wnet.setupLoss()
-            wnet.train(ds, FLAGS)
