@@ -1,9 +1,13 @@
 #!/usr/bin/env python
+<<<<<<< HEAD
+"""Builds the a general purpose MLP classifier."""
+=======
 """Builds a simple neural network experimenting with the following techniques :
     - Regularization
     - weighted cross entropy cost function to make up for imbalanced data
     - Cost pertubation
 """
+>>>>>>> 682a8d38127b985f542f555ef926af18301f8946
 from __future__ import absolute_import
 from __future__ import division
 # from __future__ import print_function
@@ -12,7 +16,10 @@ import math
 import tensorflow as tf
 import numpy as np
 import time
+<<<<<<< HEAD
+=======
 import pdb
+>>>>>>> 682a8d38127b985f542f555ef926af18301f8946
 
 class Classifier_Network:
 
@@ -25,27 +32,45 @@ class Classifier_Network:
                  batch_size = 100,
                  hidden_act = tf.nn.relu,
                  output_act = tf.nn.softmax,
+                 keep_prob = 1.,
                  pos_weight = 1.):
+<<<<<<< HEAD
+        """Initializes the MLP classifier
+=======
         """Initialize the network
+>>>>>>> 682a8d38127b985f542f555ef926af18301f8946
         Args:
-            hidden_layer_cnt: number of hidden layers,
-            hidden_sizes: list of number of neurons in each hidden layer,
-            batch_size: Size of the batch.
-            hidden_acts: hidden layer activation function,
-            output_act = output layer activation function
+            FLAGS: input arguments
+            input_size: inputs size of the network
+            output_size: number of classes
+            hidden_layer_cnt: number of hidden layers (excluding the output)
+            hidden_sizes: size of hidden layers (excluding the output)
+            batch_size: number of samples in the training batch
+            hidden_act: activation function for the hidden neurons
+            output_act: activation function for the network output
+            keep_prob: 1 - dropout probability
+            pos_weight: positive coefficient in the loss function
         """
-        self._in_size    = input_size        # dimension of network input
-        self._out_size   = output_size       # dimension of network output
-        self._lcnt       = hidden_layer_cnt  # num of hidden layers
-        self._hsize      = hidden_sizes # num of neurons in each hidden layer
-        self._batch_size = batch_size   # num of samples in training batch
-        self._hact       = hidden_act   # hidden layer activation function
-        self._oact       = output_act   # output layer acitvation function
+        self._in_size    = input_size
+        self._out_size   = output_size
+        self._lcnt       = hidden_layer_cnt
+        self._hsize      = hidden_sizes
+        self._batch_size = batch_size
+        self._hact       = hidden_act
+        self._oact       = output_act
         self._pos_weight = pos_weight
+        self._l2_coeff = 0.0
+        self._dropout = False;
+        if keep_prob < 1.:
+            self._dropout = True
+            self._keep_prob = keep_prob
         # define the network placeholders
-        self._inputs_pl = tf.placeholder(tf.float32, shape=(None,
-                                                            self._in_size))
-        self._labels_pl = tf.placeholder(tf.int32, shape=(None))
+        self._inputs_pl = tf.placeholder(tf.float32,
+                                         shape=(None, self._in_size))
+        self._labels_pl = tf.placeholder(tf.int32,
+                                         shape=(None))
+        if self._dropout:
+            self._dropout_pl = tf.placeholder(tf.float32)
 
         self._buildNet()
         self._sess = tf.Session()
@@ -75,13 +100,13 @@ class Classifier_Network:
         return tf.Variable(initial)
 
     def _nnLayer(self,
-                  input_tensor,
-                  input_dim,
-                  output_dim,
-                  layer_name,
-                  act=tf.nn.relu):
+                 input_tensor,
+                 input_dim,
+                 output_dim,
+                 layer_name,
+                 set_dropout = False,
+                 act=tf.nn.relu):
         """Reusable code for making a simple neural net layer.
-
         It does a matrix multiply, bias add, and then uses relu to nonlinearize.
         It also sets up name scoping so that the resultant graph is easy to read,
         and adds a number of summary ops.
@@ -97,51 +122,28 @@ class Classifier_Network:
             with tf.name_scope('ridge_transform'):
                 preactivate = tf.matmul(input_tensor, weights) + biases
             activations = act(preactivate, name='activation')
-            return activations
-
-    def _nnLayerWithScope(self,
-                          input_tensor,
-                          input_dim,
-                          output_dim,
-                          layer_name,
-                          act=tf.nn.relu):
-        """Reusable code for making a simple neural net layer.
-
-        It does a matrix multiply, bias add, and then uses relu to nonlinearize.
-        It also sets up name scoping so that the resultant graph is easy to read,
-        and adds a number of summary ops.
-        """
-        # Adding a name scope ensures logical grouping of the layers in the
-        # graph.
-        with tf.variable_scope(layer_name, reuse = False):
-            # Create variable named "weights".
-            weights = tf.get_variable("weights",
-                                      [input_dim, output_dim],
-                                      initializer=tf.random_uniform_initializer(-0.1,0.1))
-            # Create variable named "biases".
-            biases = tf.get_variable("biases",
-                                     [output_dim],
-                                     initializer=tf.constant_initializer(0.1))
-            with tf.name_scope('ridge_transform'):
-                preactivate = tf.matmul(input_tensor, weights) + biases
-            activations = act(preactivate, name='activation')
-            return activations, preactivate
+            if (self._dropout) & (set_dropout):
+                return tf.nn.dropout(activations, self._dropout_pl)
+            else:
+                return activations
 
     def _buildNet(self):
         # input layer
         hidden = self._nnLayer(self._inputs_pl,
-                                self._in_size,
-                                self._hsize[0],
-                                layer_name = 'input',
-                                act = self._hact)
+                               self._in_size,
+                               self._hsize[0],
+                               layer_name = 'input',
+                               set_dropout = True,
+                               act = self._hact)
         # making hidden layers
         for i in range(1, self._lcnt):
             astr = 'hidden{0}'.format(i)
             hidden = self._nnLayer(hidden,
-                                    self._hsize[i - 1],
-                                    self._hsize[i],
-                                    layer_name = astr,
-                                    act = self._hact)
+                                   self._hsize[i - 1],
+                                   self._hsize[i],
+                                   layer_name = astr,
+                                   set_dropout = True,
+                                   act = self._hact)
         # making output layer
         # NOTE: The output activation function is applied on the ridge
         # transform in the loss function
@@ -150,28 +152,6 @@ class Classifier_Network:
             biases  = self._biasVariable([self._out_size])
             self._logits  = tf.matmul(hidden, weights) + biases
             self._outputs = self._oact(self._logits)
-
-    def _buildNetWithScope(self):
-        # input layer
-        hidden, _ = self._nnLayerWithScope(self._inputs_pl,
-                                           self._in_size,
-                                           self._hsize[0],
-                                           layer_name = 'input',
-                                           act = self._hact)
-        # making hidden layers
-        for i in range(1, self._lcnt):
-            astr = 'hidden{0}'.format(i)
-            hidden,_ = self._nnLayerWithScope(hidden,
-                                              self._hsize[i - 1],
-                                              self._hsize[i],
-                                              layer_name = astr,
-                                              act = self._hact)
-        # making output layer
-        self._outputs, self._logits = self._nnLayerWithScope(hidden,
-                                                             self._hsize[self._lcnt-1],
-                                                             self._out_size,
-                                                             layer_name = 'output',
-                                                             act = self._oact)
 
     def setupLoss(self):
         """Calculates the loss from the logits and the labels.
@@ -185,8 +165,9 @@ class Classifier_Network:
 
         # Adding l2 regularization
         all_weights = tf.trainable_variables()
-        lossL2 = tf.add_n([tf.nn.l2_loss(v) for v in all_weights])*0.005
-        self._loss = tf.reduce_mean(self._cross_entropy, name='xentropy_mean') + lossL2
+        lossL2 = tf.add_n([tf.nn.l2_loss(v) for v in all_weights]) * self._l2_coeff
+        self._loss_raw = tf.reduce_mean(self._cross_entropy, name='xentropy_mean')
+        self._loss = self._loss_raw + lossL2
 
     def _setupTrainingOp(self, learning_rate):
         """Sets up the training Ops.
@@ -211,10 +192,6 @@ class Classifier_Network:
     def _setupEvaluation(self):
         """Evaluate the quality of the logits at predicting the label.
         """
-        # For a classifier model, we can use the in_top_k Op.
-        # It returns a bool tensor with shape [batch_size] that is true for
-        # the examples where the label is in the top k (here k=1)
-        # of all logits for that example.
         rounded_output = tf.round(self._outputs)
         self._correct = tf.equal(rounded_output, self._labels)
         # Return the number of true entries.
@@ -239,6 +216,8 @@ class Classifier_Network:
             self._inputs_pl: inputs_feed,
             self._labels_pl: labels_feed
         }
+        if self._dropout:
+            self._feed_dict.update({self._dropout_pl: self._keep_prob})
 
     def _eval(self, dataset):
         """Runs one evaluation against the full epoch of data.
@@ -253,6 +232,8 @@ class Classifier_Network:
                 self._inputs_pl: np.reshape(dataset.images[i],(1,-1)),
                 self._labels_pl: dataset.labels[i]
             }
+            if self._dropout:
+                afeed_dict.update({self._dropout_pl: self._keep_prob})
             true_count += self._sess.run(self._test_eval,
                                         feed_dict=afeed_dict)
         precision = 100 * true_count / dataset.num_examples
@@ -265,10 +246,12 @@ class Classifier_Network:
     def producePredictions(self, dataset):
         predictions = []
         for i in xrange(dataset.num_examples):
+            afeed_dict ={self._inputs_pl: np.reshape(
+                dataset.images[i],(1,-1))}
+            if self._dropout:
+                afeed_dict.update({self._dropout_pl: self._keep_prob})
             predict = self._sess.run(self._outputs,
-                                     feed_dict =
-                                     {self._inputs_pl: np.reshape(
-                                         dataset.images[i],(1,-1))})
+                                     feed_dict = afeed_dict)
             predictions.append(predict)
         return predictions
 
@@ -286,9 +269,8 @@ class Classifier_Network:
         # epoche loops
         local_min_cnt = 0
         perturb = 0
-        def_magnitude = 0.1
-        magnitude = def_magnitude
         costs = np.zeros(FLAGS.epochs)
+        max_local_mins = FLAGS.max_localmin_iters
         for epoch in xrange(FLAGS.epochs):
             # calculate number of iteration per an epoche
             num_itr = int(round(dataset.train.num_examples / self._batch_size) + 1)
@@ -297,13 +279,14 @@ class Classifier_Network:
                 self._fillFeedDict(dataset.train)
                 _, cost = self._sess.run([self._train_op, self._loss],
                                          feed_dict=self._feed_dict)
-            duration = time.time() - start_time
-            print('Epoch %d took %.3f sec, cost: %f' % (epoch,duration,cost))
 
-            self._fillFeedDict(dataset.validation,True)
             val_accuracy = self._eval(dataset.validation)
-            val_cost = self._sess.run(self._loss,self._feed_dict)
+            self._fillFeedDict(dataset.validation,True)
+            val_cost = self._sess.run(self._loss_raw,self._feed_dict)
             costs[epoch] = val_cost
+
+            duration = time.time() - start_time
+            print('Epoch %d took %.3f sec, cost: %f' % (epoch,duration,val_cost))
             if epoch == 0:
                 self._saver.save(self._sess,
                                  self._FLAGS.model_dir)
@@ -313,30 +296,38 @@ class Classifier_Network:
             if val_cost < best_cost:
                 local_min_cnt = 0
                 perturb = 0
-                magnitude = def_magnitude
                 best_cost = val_cost
                 best_accuracy = val_accuracy
                 self._saver.save(self._sess,
                                  self._FLAGS.model_dir)
+                print('#############################\n')
+                print('# Best validation detected! #\n')
+                print('#############################\n')
             else:
                 local_min_cnt += 1
 
             print '\tBest cost so far: ', best_cost,
             print ', corresponding accuracy: ', best_accuracy,
             print ', local min iterations: ', local_min_cnt
-            if local_min_cnt == FLAGS.max_localmin_iters:
+
+            if local_min_cnt == max_local_mins:
                 local_min_cnt = 0
                 perturb += 1
-                self._perturbWeights(magnitude)
-                print '!!!!!!!!!!!!!!!!!!!!!!! PERTURBED !!!!!!!!!!!!!!!!!!!!!!!'
-                magnitude *= 2
+                self._l2_coeff = 1 * perturb
+                self.setupLoss()
             if perturb == FLAGS.max_perturbs:
+<<<<<<< HEAD
+                return costs
+        return costs
+
+=======
                 pdb.set_trace()
                 return -1
             # slight increase in the batch size for the next epoch
             # self._batch_size = min(self._batch_size + 5,dataset.train.num_examples - 1)
         #pdb.set_trace()
         return 0
+>>>>>>> 682a8d38127b985f542f555ef926af18301f8946
 
     def _perturbWeights(self,
                         perturb_mech = 'weight_wise',
@@ -344,7 +335,6 @@ class Classifier_Network:
                         magnitude = 0.1):
         #get list of all trainable weights (and biases)
         all_weights = tf.trainable_variables()
-
         for i in xrange(len(all_weights)):
             # get the weight values
             weight = self._sess.run(all_weights[i])
@@ -379,7 +369,6 @@ class Classifier_Network:
         Args:
             dataset: The set of images and labels.
         """
-        # print('Output calculation:')
         self._fillFeedDict(dataset, full = True)
         output_values = self._sess.run(self._outputs,
                                       feed_dict = self._feed_dict)
