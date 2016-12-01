@@ -151,7 +151,7 @@ def main(_):
     username = os.getlogin()
     user_dir = '/home/' + username
     instances_count = 10
-<<<<<<< HEAD
+
     for patient in xrange(3):
         patient_id = 1 + patient
         FLAGS.patient_id = patient_id
@@ -181,7 +181,7 @@ def main(_):
         frame['File'] = merged
         frame.to_csv(str(FLAGS.patient_id) + '_average_res.csv', index=False)
         print('Saved results in: ', FLAGS.test_set)
-=======
+
     # for patient in xrange(3):
     patient_id = 0 #1 + patient
     FLAGS.patient_id = patient_id
@@ -212,7 +212,7 @@ def main(_):
     frame['File'] = merged
     frame.to_csv(str(FLAGS.patient_id) + '_average_res.csv', index=False)
     print('Saved results in: ', FLAGS.test_set)
->>>>>>> 682a8d38127b985f542f555ef926af18301f8946
+
 
 if __name__ == '__main__':
 

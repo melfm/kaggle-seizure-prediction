@@ -1,13 +1,9 @@
 #!/usr/bin/env python
-<<<<<<< HEAD
-"""Builds the a general purpose MLP classifier."""
-=======
 """Builds a simple neural network experimenting with the following techniques :
     - Regularization
     - weighted cross entropy cost function to make up for imbalanced data
     - Cost pertubation
 """
->>>>>>> 682a8d38127b985f542f555ef926af18301f8946
 from __future__ import absolute_import
 from __future__ import division
 # from __future__ import print_function
@@ -16,10 +12,7 @@ import math
 import tensorflow as tf
 import numpy as np
 import time
-<<<<<<< HEAD
-=======
 import pdb
->>>>>>> 682a8d38127b985f542f555ef926af18301f8946
 
 class Classifier_Network:
 
@@ -34,11 +27,7 @@ class Classifier_Network:
                  output_act = tf.nn.softmax,
                  keep_prob = 1.,
                  pos_weight = 1.):
-<<<<<<< HEAD
         """Initializes the MLP classifier
-=======
-        """Initialize the network
->>>>>>> 682a8d38127b985f542f555ef926af18301f8946
         Args:
             FLAGS: input arguments
             input_size: inputs size of the network
@@ -316,18 +305,9 @@ class Classifier_Network:
                 self._l2_coeff = 1 * perturb
                 self.setupLoss()
             if perturb == FLAGS.max_perturbs:
-<<<<<<< HEAD
                 return costs
         return costs
 
-=======
-                pdb.set_trace()
-                return -1
-            # slight increase in the batch size for the next epoch
-            # self._batch_size = min(self._batch_size + 5,dataset.train.num_examples - 1)
-        #pdb.set_trace()
-        return 0
->>>>>>> 682a8d38127b985f542f555ef926af18301f8946
 
     def _perturbWeights(self,
                         perturb_mech = 'weight_wise',
