@@ -14,3 +14,12 @@ Neural network solution using tensorflow. Three architectures explored, MLP, CNN
 
 
 Tested on Ubuntu 14.04, tensorflow 0.11.0rc1, GPU:TitanX.
+
+## Performance and accuracy:
+- Training speed differs for each architecture, a few hours max.
+- The best AUC achieved with MLP ~0.68-0.69
+
+## TODO:
+- Testing weight perturbation
+- CNN architecture contains a bug in the cost (this was fixed in MLP), which causes the cost to jump.
+
