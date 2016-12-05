@@ -2,7 +2,7 @@
 """Builds a simple neural network experimenting with the following techniques :
     - Regularization
     - weighted cross entropy cost function to make up for imbalanced data
-    - Cost pertubation
+    - Weight pertubation
 """
 from __future__ import absolute_import
 from __future__ import division
