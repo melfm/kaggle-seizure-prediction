@@ -20,6 +20,6 @@ Tested on Ubuntu 14.04, tensorflow 0.11.0rc1, GPU:TitanX.
 - The best AUC achieved with MLP ~0.68-0.69
 
 ## TODO:
-- Testing weight perturbation
+- Testing (operations such as weight perturbation is one example)
 - CNN architecture contains a bug in the cost (this was fixed in MLP), which causes the cost to jump.
 
