@@ -6,7 +6,6 @@
 """
 from __future__ import absolute_import
 from __future__ import division
-# from __future__ import print_function
 
 import math
 import tensorflow as tf
@@ -14,19 +13,20 @@ import numpy as np
 import time
 import pdb
 
+
 class Classifier_Network:
 
     def __init__(self,
                  FLAGS,
                  input_size,
                  output_size,
-                 hidden_layer_cnt = 1,
-                 hidden_sizes = [100],
-                 batch_size = 100,
-                 hidden_act = tf.nn.relu,
-                 output_act = tf.nn.softmax,
-                 keep_prob = 1.,
-                 pos_weight = 1.):
+                 hidden_layer_cnt=1,
+                 hidden_sizes=[100],
+                 batch_size=100,
+                 hidden_act=tf.nn.relu,
+                 output_act=tf.nn.softmax,
+                 keep_prob=1.,
+                 pos_weight=1.):
         """Initializes the MLP classifier
         Args:
             FLAGS: input arguments
@@ -40,16 +40,16 @@ class Classifier_Network:
             keep_prob: 1 - dropout probability
             pos_weight: positive coefficient in the loss function
         """
-        self._in_size    = input_size
-        self._out_size   = output_size
-        self._lcnt       = hidden_layer_cnt
-        self._hsize      = hidden_sizes
+        self._in_size = input_size
+        self._out_size = output_size
+        self._lcnt = hidden_layer_cnt
+        self._hsize = hidden_sizes
         self._batch_size = batch_size
-        self._hact       = hidden_act
-        self._oact       = output_act
+        self._hact = hidden_act
+        self._oact = output_act
         self._pos_weight = pos_weight
         self._l2_coeff = 0.0
-        self._dropout = False;
+        self._dropout = False
         if keep_prob < 1.:
             self._dropout = True
             self._keep_prob = keep_prob
@@ -66,15 +66,15 @@ class Classifier_Network:
 
         # private attributes
         self._FLAGS = FLAGS
-        self._correct           = None
-        self._cross_entropy     = None
-        self._feed_dict         = None
-        self._feed_dict_full    = None
-        self._labels            = None
-        self._loss              = None
-        self._test_eval         = None
-        self._train_op          = None
-        self._saver             = tf.train.Saver()
+        self._correct = None
+        self._cross_entropy = None
+        self._feed_dict = None
+        self._feed_dict_full = None
+        self._labels = None
+        self._loss = None
+        self._test_eval = None
+        self._train_op = None
+        self._saver = tf.train.Saver()
 
     def _weightVariable(self, shape):
         """Create a weight variable with appropriate initialization."""
@@ -93,7 +93,7 @@ class Classifier_Network:
                  input_dim,
                  output_dim,
                  layer_name,
-                 set_dropout = False,
+                 set_dropout=False,
                  act=tf.nn.relu):
         """Reusable code for making a simple neural net layer.
         It does a matrix multiply, bias add, and then uses relu to nonlinearize.
@@ -121,25 +121,26 @@ class Classifier_Network:
         hidden = self._nnLayer(self._inputs_pl,
                                self._in_size,
                                self._hsize[0],
-                               layer_name = 'input',
-                               set_dropout = True,
-                               act = self._hact)
+                               layer_name='input',
+                               set_dropout=True,
+                               act=self._hact)
         # making hidden layers
         for i in range(1, self._lcnt):
             astr = 'hidden{0}'.format(i)
             hidden = self._nnLayer(hidden,
                                    self._hsize[i - 1],
                                    self._hsize[i],
-                                   layer_name = astr,
-                                   set_dropout = True,
-                                   act = self._hact)
+                                   layer_name=astr,
+                                   set_dropout=True,
+                                   act=self._hact)
         # making output layer
         # NOTE: The output activation function is applied on the ridge
         # transform in the loss function
         with tf.name_scope('output_act'):
-            weights = self._weightVariable([self._hsize[self._lcnt-1], self._out_size])
-            biases  = self._biasVariable([self._out_size])
-            self._logits  = tf.matmul(hidden, weights) + biases
+            weights = self._weightVariable(
+                [self._hsize[self._lcnt-1], self._out_size])
+            biases = self._biasVariable([self._out_size])
+            self._logits = tf.matmul(hidden, weights) + biases
             self._outputs = self._oact(self._logits)
 
     def setupLoss(self):
@@ -150,12 +151,14 @@ class Classifier_Network:
                     self._logits,
                     self._labels,
                     self._pos_weight,
-                    name = 'wentropy')
+                    name='wentropy')
 
         # Adding l2 regularization
         all_weights = tf.trainable_variables()
-        lossL2 = tf.add_n([tf.nn.l2_loss(v) for v in all_weights]) * self._l2_coeff
-        self._loss_raw = tf.reduce_mean(self._cross_entropy, name='xentropy_mean')
+        lossL2 = tf.add_n([tf.nn.l2_loss(v)
+                           for v in all_weights]) * self._l2_coeff
+        self._loss_raw = tf.reduce_mean(
+            self._cross_entropy, name='xentropy_mean')
         self._loss = self._loss_raw + lossL2
 
     def _setupTrainingOp(self, learning_rate):
@@ -171,7 +174,7 @@ class Classifier_Network:
         tf.scalar_summary(self._loss.op.name, self._loss)
         # Create the gradient descent optimizer with the given learning rate.
         # optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-        optimizer = tf.train.AdamOptimizer(learning_rate)
+        optimizer = tf.train.RMSPropOptimizer(learning_rate)
         # Create a variable to track the global step.
         global_step = tf.Variable(0, name='global_step', trainable=False)
         # Use the optimizer to apply the gradients that minimize the loss
@@ -186,7 +189,7 @@ class Classifier_Network:
         # Return the number of true entries.
         self._test_eval = tf.reduce_sum(tf.cast(self._correct, tf.int32))
 
-    def _fillFeedDict(self, dataset, full = False):
+    def _fillFeedDict(self, dataset, full=False):
         """Fills the feed_dict for training the given step.
         A feed_dict takes the form of:
         feed_dict = {
@@ -218,29 +221,29 @@ class Classifier_Network:
 
         for i in xrange(dataset.num_examples):
             afeed_dict = {
-                self._inputs_pl: np.reshape(dataset.images[i],(1,-1)),
+                self._inputs_pl: np.reshape(dataset.images[i], (1, -1)),
                 self._labels_pl: dataset.labels[i]
             }
             if self._dropout:
                 afeed_dict.update({self._dropout_pl: self._keep_prob})
             true_count += self._sess.run(self._test_eval,
-                                        feed_dict=afeed_dict)
+                                         feed_dict=afeed_dict)
         precision = 100 * true_count / dataset.num_examples
         # pdb.set_trace()
         print '\tNum examples: ', dataset.num_examples,\
               '\t Num correct: ', true_count,\
-              '\t Precision  %', precision,'%'
+              '\t Precision  %', precision, '%'
         return precision
 
     def producePredictions(self, dataset):
         predictions = []
         for i in xrange(dataset.num_examples):
-            afeed_dict ={self._inputs_pl: np.reshape(
-                dataset.images[i],(1,-1))}
+            afeed_dict = {self._inputs_pl: np.reshape(
+                dataset.images[i], (1, -1))}
             if self._dropout:
                 afeed_dict.update({self._dropout_pl: self._keep_prob})
             predict = self._sess.run(self._outputs,
-                                     feed_dict = afeed_dict)
+                                     feed_dict=afeed_dict)
             predictions.append(predict)
         return predictions
 
@@ -262,7 +265,11 @@ class Classifier_Network:
         max_local_mins = FLAGS.max_localmin_iters
         for epoch in xrange(FLAGS.epochs):
             # calculate number of iteration per an epoche
-            num_itr = int(round(dataset.train.num_examples / self._batch_size) + 1)
+            num_itr = int(
+                round(
+                    dataset.train.num_examples /
+                    self._batch_size) +
+                1)
             start_time = time.time()
             for step in xrange(num_itr):
                 self._fillFeedDict(dataset.train)
@@ -270,12 +277,14 @@ class Classifier_Network:
                                          feed_dict=self._feed_dict)
 
             val_accuracy = self._eval(dataset.validation)
-            self._fillFeedDict(dataset.validation,True)
-            val_cost = self._sess.run(self._loss_raw,self._feed_dict)
+            self._fillFeedDict(dataset.validation, True)
+            val_cost = self._sess.run(self._loss_raw, self._feed_dict)
             costs[epoch] = val_cost
 
             duration = time.time() - start_time
-            print('Epoch %d took %.3f sec, cost: %f' % (epoch,duration,val_cost))
+            print(
+                'Epoch %d took %.3f sec, cost: %f' %
+                (epoch, duration, val_cost))
             if epoch == 0:
                 self._saver.save(self._sess,
                                  self._FLAGS.model_dir)
@@ -308,12 +317,11 @@ class Classifier_Network:
                 return costs
         return costs
 
-
     def _perturbWeights(self,
-                        perturb_mech = 'weight_wise',
-                        random_step = 'uniform',
-                        magnitude = 0.1):
-        #get list of all trainable weights (and biases)
+                        perturb_mech='weight_wise',
+                        random_step='uniform',
+                        magnitude=0.1):
+        # get list of all trainable weights (and biases)
         all_weights = tf.trainable_variables()
         for i in xrange(len(all_weights)):
             # get the weight values
@@ -323,8 +331,12 @@ class Classifier_Network:
                 perturbation = np.random.rand(*weight.shape)
             # check perturbnation mechanism to apply perturbation
             if perturb_mech == 'weight_wise':
-                self._sess.run(all_weights[i].assign_add(magnitude * np.multiply(perturbation,
-                                                                                 weight)))
+                self._sess.run(
+                    all_weights[i].assign_add(
+                        magnitude *
+                        np.multiply(
+                            perturbation,
+                            weight)))
 
     def fullEval(self, dataset):
         """Runs the full evaluation against the entire dataset.
@@ -332,13 +344,13 @@ class Classifier_Network:
             data_set: The set of images and labels to evaluate.
         """
         # Fill the placeholders with the given dataset
-        self._fillFeedDict(dataset, full = True)
+        self._fillFeedDict(dataset, full=True)
         # Get the loss for all samples
         loss_values = self._sess.run(self._cross_entropy,
-                                    feed_dict=self._feed_dict)
+                                     feed_dict=self._feed_dict)
         # True counts
         predictions = self._sess.run(self._correct,
-                                    feed_dict=self._feed_dict)
+                                     feed_dict=self._feed_dict)
         correct_class_idx = np.where(predictions)
         misclassified_idx = np.where(predictions is False)
         return correct_class_idx[0], misclassified_idx[0], loss_values
@@ -349,9 +361,9 @@ class Classifier_Network:
         Args:
             dataset: The set of images and labels.
         """
-        self._fillFeedDict(dataset, full = True)
+        self._fillFeedDict(dataset, full=True)
         output_values = self._sess.run(self._outputs,
-                                      feed_dict = self._feed_dict)
+                                       feed_dict=self._feed_dict)
         return output_values
 
     def extractIndices(self, ds):
@@ -363,5 +375,4 @@ class Classifier_Network:
         return adict
 
     def load(self):
-        self._saver.restore(self._sess,self._FLAGS.model_dir )
-
+        self._saver.restore(self._sess, self._FLAGS.model_dir)

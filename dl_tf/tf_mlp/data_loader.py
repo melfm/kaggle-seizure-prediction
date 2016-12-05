@@ -7,9 +7,6 @@ import pandas as pd
 import random
 import os
 
-import pdb
-import matplotlib.pyplot as plt
-
 
 class SeizureDataset:
 
@@ -81,8 +78,8 @@ class SeizureDataset:
 
         ignored_files = df_safe.loc[df_safe['safe'] == 0]
         ignored_files = ignored_files['image'].tolist()
+        # Loading this file is known to cause errors
         ignored_files.append('1_45_1.mat')
-        #print('Ignoring these files:', ignored_files)
         all_data = self.get_data_dir(data_dir_name)
 
         file_with_class = np.array(
@@ -98,9 +95,6 @@ class SeizureDataset:
         inter_count, preic_count = self.count_class_occurrences(all_data)
         print('Interictal/0 samples:', inter_count)
         print('Preictal/1 samples:', preic_count)
-
-        # inter_count = inter_count - 8
-        #preic_count = 140
 
         data_random_interictal = np.random.choice(
             all_data[all_data['class'] == self.INTERICTAL_CLASS],
@@ -150,10 +144,7 @@ class SeizureDataset:
                                                               str(ex)))
                 continue
 
-            eeg_image = mat_data['eeg_image']
-            # pdb.set_trace()
-            # eeg_image = eeg_image[:][200:800]
-
+            eeg_image = mat_data['aux']
             # make sure we grab the right labels
             if train_data:
                 label = self.get_class_from_name(filename)
@@ -162,18 +153,6 @@ class SeizureDataset:
             file_ids.append(filename)
 
         return eeg_data, file_ids, eeg_labels
-
-    '''
-    def trans2image(self,channel_data):
-        Z = np.zeros((self.samp_count,self.samp_count))
-        fft_out = np.fft.fft(channel_data)
-        for i in xrange(self.samp_count):
-            for j in xrange(self.samp_count):
-                Z[i,j] = np.exp(-np.abs(fft_out[i])/np.abs(fft_out[j]))
-        Z = Z / np.max(Z)
-        print 'done'
-        return Z
-    '''
 
     def subsample_data(self, channels_data, rate):
         channel_columns = channels_data.shape[0]
@@ -201,8 +180,6 @@ class SeizureDataset:
         y_train_or = shuffled_dataset['class']
 
         assert(np.array_equal(y_train, y_train_or))
-        # print('filename', labels)
-        # print('label', y_train)
         assert(len(X_train) == len(y_train))
 
         return X_train, y_train
@@ -211,7 +188,6 @@ class SeizureDataset:
         base_dir_test = self.path_to_all_datasets + '/' + test_set_name
         print("Data set directory==>", base_dir_test)
         all_data = self.get_data_dir(test_set_name)
-        #print("all data", all_data, len(all_data))
 
         X_test, file_ids, _ = self.get_X_from_files(
             base_dir_test, all_data,  False)
